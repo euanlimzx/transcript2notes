@@ -1,0 +1,137 @@
+"""Topic extraction: one pass over the transcript to get major topics, used as context for boundary detection."""
+import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+from openai import OpenAI
+
+from .models import ParsedLine
+from .stage1_parse import seconds_to_timestamp, slice_for_llm, MAX_CHARS_PER_SLICE
+from . import prompts_config
+
+logger = logging.getLogger(__name__)
+
+# Use same char limit as Stage 1 for Option A (full transcript in one call)
+TOPIC_EXTRACTION_MAX_CHARS = MAX_CHARS_PER_SLICE
+
+MAX_CONCURRENT_TOPIC_REQUESTS = 5
+
+
+def _format_lines_for_prompt(lines: list[ParsedLine]) -> str:
+    """Format parsed lines as timestamped transcript text."""
+    return "\n".join(f"{seconds_to_timestamp(ln.seconds)} {ln.text}" for ln in lines)
+
+
+def _parse_topic_list(content: str) -> list[str]:
+    """Parse LLM output into ordered list of topic labels (one per line, stripped)."""
+    topics = []
+    for line in content.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        # Remove leading numbering or bullets if present
+        if line and line[0].isdigit():
+            rest = line.lstrip("0123456789.)- ")
+            if rest:
+                line = rest
+        elif line.startswith("- ") or line.startswith("* "):
+            line = line[2:].strip()
+        topics.append(line)
+    return topics
+
+
+def _extract_topics_full(client: OpenAI, transcript_text: str, model: str) -> list[str]:
+    """Option A: single call with full transcript."""
+    resp = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": prompts_config.TOPIC_EXTRACTION_FULL},
+            {"role": "user", "content": transcript_text},
+        ],
+    )
+    raw = (resp.choices[0].message.content or "").strip()
+    return _parse_topic_list(raw)
+
+
+def _extract_topics_chunk(client: OpenAI, chunk_text: str, model: str) -> list[str]:
+    """Option B: one chunk - return topic list for this segment."""
+    resp = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": prompts_config.TOPIC_EXTRACTION_CHUNK},
+            {"role": "user", "content": chunk_text},
+        ],
+    )
+    raw = (resp.choices[0].message.content or "").strip()
+    return _parse_topic_list(raw)
+
+
+def _merge_topic_lists(client: OpenAI, segment_topic_lists: list[list[str]], model: str) -> list[str]:
+    """Merge per-segment topic lists into one ordered list via LLM."""
+    formatted = "\n".join(
+        f"Segment {i + 1}: " + ", ".join(topics)
+        for i, topics in enumerate(segment_topic_lists)
+        if topics
+    )
+    if not formatted.strip():
+        return []
+    resp = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": prompts_config.TOPIC_MERGE},
+            {"role": "user", "content": formatted},
+        ],
+    )
+    raw = (resp.choices[0].message.content or "").strip()
+    return _parse_topic_list(raw)
+
+
+def extract_topics(
+    lines: list[ParsedLine],
+    model: str = "gpt-4o-mini",
+    api_key: str | None = None,
+) -> list[str]:
+    """
+    Extract major topics/examples from the lecture in order.
+    - Option A: if transcript fits in TOPIC_EXTRACTION_MAX_CHARS, one LLM call on full text.
+    - Option B: otherwise chunk by time (same as Stage 1), one call per chunk in parallel, then merge via one LLM call.
+    """
+    if not lines:
+        return []
+
+    client = OpenAI(api_key=api_key)
+    total_chars = sum(len(ln.text) + 1 for ln in lines)
+
+    if total_chars <= TOPIC_EXTRACTION_MAX_CHARS:
+        logger.info("Topic extraction: Option A (full transcript, %d chars)", total_chars)
+        transcript_text = _format_lines_for_prompt(lines)
+        return _extract_topics_full(client, transcript_text, model)
+
+    # Option B: chunk and merge
+    chunks = slice_for_llm(lines)
+    logger.info(
+        "Topic extraction: Option B (chunked, %d chars, %d chunks)",
+        total_chars,
+        len(chunks),
+    )
+    chunk_texts = [_format_lines_for_prompt(c) for c in chunks]
+    segment_topic_lists: list[list[str]] = []
+    workers = min(MAX_CONCURRENT_TOPIC_REQUESTS, len(chunk_texts))
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        futures = {
+            executor.submit(_extract_topics_chunk, client, ct, model): i
+            for i, ct in enumerate(chunk_texts)
+        }
+        results: list[tuple[int, list[str]]] = []
+        for future in as_completed(futures):
+            idx = futures[future]
+            try:
+                topics = future.result()
+                results.append((idx, topics))
+            except Exception as e:
+                logger.warning("Topic extraction failed for chunk %s: %s", idx, e)
+    # Restore order
+    results.sort(key=lambda x: x[0])
+    segment_topic_lists = [t for _, t in results]
+    if not segment_topic_lists:
+        return []
+    return _merge_topic_lists(client, segment_topic_lists, model)

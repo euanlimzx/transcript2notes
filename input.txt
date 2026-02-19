@@ -1,0 +1,919 @@
+0:15 So today we're going to talk about logic programing. Once I get the microphone fixed, I go.
+0:33 Uh, so in some sense, this is the, uh, third major division of the class, right?
+0:40 We started off with functional programing.
+0:46 We are now doing logic programing, and we're saving sort of the most popular for last, right.
+0:55 Which is imperative programing. Which is the you know, here we're talking about C and C plus plus.
+1:03 And I guess we've already done Java.
+1:06 So we've done all right some imperative programing etc., JavaScript and all that sort of thing with functional programing.
+1:12 We have OCaml, lots of other language for logic programing.
+1:17 Really Prolog is the main game in town. There are others, but Prolog is is by far the leading candidate.
+1:23 And the difference here to some extent is you can think of it in terms of programing features.
+1:31 You you can omit. Right. So with functional programing right, we deal with functions.
+1:41 And the way we glue them together is we do calls with imperative programing.
+1:46 We deal with statements. And the way we do glue them together is we you know, we have you know, sequencing.
+1:53 We do one statement and then the next.
+1:57 And to some extent, you can think of functional programing as being like imperative programing, except you give up assignment statements, right?
+2:09 No assignment statements or another way of putting it is no side effects.
+2:19 Once you have a value, you can't change it.
+2:24 And that's, you know, in some sense you feel like you're programing with one arm tied behind your back.
+2:31 But in another sense, functional programing gives you a lot of pluses.
+2:35 In fact, it's now a popular programing style in languages that originally designed to be imperative.
+2:41 JavaScript has a significant sort of practical area where people say, oh, just just write functional code, right.
+2:49 So, um, you know, you give up something and you get something and to some extent, you know,
+2:54 we're cheating a little bit here because in these languages, people have functions or methods or whatever you want to call them.
+3:02 So in some sense, you know, you already have functions here.
+3:06 You just emphasize them here and give up sequencing.
+3:11 Right. So in some sense you can think of logic programing as the same way, right.
+3:18 Instead of functions you have predicates. I suppose one way you can think about predicates is they're functions that only return booleans.
+3:29 Right. So you've tied yet another arm behind your back okay.
+3:34 And the way you hook together predicates is with logical connectives and and or and
+3:39 maybe not uh put a little question mark here and implies and all that sort of thing.
+3:45 And then what do you give up. Well you give up functions.
+3:54 There are no functions in the traditional sense.
+3:59 In Prolog you cannot make a function call.
+4:03 You can only make a query. You can ask the system a question.
+4:10 And as part of its answer, you can sort of think that the answer is the return value from a function.
+4:16 All that saying, but that's not what's really going on. You're just asking a question and getting an answer, right.
+4:22 So you give up even more with Prolog, right?
+4:26 And yeah, you don't have any assignments, you don't have any sequencing in the traditional sense and all that sort of thing.
+4:32 And it seems like, uh, you shouldn't be able to get anything done at all in Prolog.
+4:37 If you give up, give up all this stuff. Right. You've tied both arms behind your back and now you're tying your legs behind.
+4:44 Your behind. All right, so what can we do if we give up all this stuff?
+4:51 And it's probably better to think of it as the following.
+4:57 With logic programing, the idea is to emphasize declarative programing.
+5:10 I. That is the goal here is to not say how to do stuff.
+5:22 Instead, you declare what you want, right?
+5:27 And the idea is you let the Prolog interpreter figure out how to get what you want,
+5:35 rather than busy yourself with little implementation details like while loops and for loops and all that sort of thing.
+5:42 In a way, it has kind of the same goals as, I don't know, vibe programing or something like that.
+5:49 You just tell Claude what you want and then it generates the code to do it, except with Prolog.
+5:58 Uh. You just, you know, write the declaration of what you want and there is no code.
+6:05 The system figures it out for you. That's sort of the big picture or the goal.
+6:11 All right. And to some extent, if, you know, a lot of programing is like this anyway,
+6:18 if you think of building a standard web application as saying, well, we've got some HTML and then we're going to populate it with stuff.
+6:27 Well, HTML already has some aspects of declarative programing, right?
+6:33 Because it tries to separate sort of the function of your web page from the form, the content versus the appearance and all that sort of thing.
+6:43 Here we're trying to separate sort of what we want and write that down and separate that from sort of how to go about it.
+6:53 So we can't do this sort of completely.
+6:58 Prolog is not a magic wand, right? It's, you know, it's symbolic ie, which has no limitations.
+7:05 But what we can do is sort of the following, at least to some extent.
+7:11 We can take sort of the algorithm that is the program we want to write and divide it into two pieces.
+7:20 The logic, which is here's the logic behind the answer that we want.
+7:26 We specify the answer that we want in a logical way.
+7:30 And then the other part is control, right.
+7:34 So logic is the formal specification of what we want the output of the program to be.
+7:41 Right. So in effect the logic constrains the answers.
+7:47 We want the answers to look like this to be logically correct.
+7:51 Right. And whether the answer is correct or not depends entirely on the logic.
+7:58 All your correctness concerns are here okay.
+8:01 The control is about advice to the interpreter.
+8:10 And ideally all this advice will be will be sort of performance improvement advice.
+8:18 It won't change the logic of your program.
+8:20 It won't change the set of correct answers, but it will help the interpreter come up with the answer more efficiently,
+8:27 which is going to be a problem if we do only logic and have no control at all.
+8:32 Right. And this is like a classic sort of software engineering trick.
+8:38 Well, it's not really a trick. It's a discipline.
+8:41 If you have a big problem, you simplify your job by breaking it into two some problems that are independent as much as possible,
+8:54 so that if you screw up here, you won't screw up here, and vice versa.
+8:58 If we screw up the control, what's going to happen? Our program will get slower, but they'll still be right if we screw up our logic.
+9:05 Okay, well, our program will have the wrong answer to so.
+9:09 So to some extent the logic is more important than control. But you know, from a software engineering point of view you still have to get both.
+9:15 Right? Okay. Well that's the goal.
+9:20 Uh, let's see how close we can get to that goal.
+9:24 And we're going to do that by doing CSS 31 all over again.
+9:32 I hope you don't mind. Right.
+9:34 So you had to learn like in CSS 31 and 32 algorithms like quicksort and heap sort and bubble sort and all that sort of thing.
+9:44 Very low level stuff. Right? I mean, most of these days nobody writes sorting algorithms.
+9:49 You just call a subroutine. We wanted to show you in CSS 31 how it's done.
+9:53 So here I'm going to show you how it's done. Assuming we want to write a low level sort routine in Prolog.
+10:00 And I'm going to focus on the logic because that's the correctness stuff.
+10:05 And later on we'll start talking about the control.
+10:08 Now in reality, if you're writing real Prolog code, which I have done for a living, you would never.
+10:15 Right. This code that I'm about to write here. For one thing, there's a built in sort predicate.
+10:20 You don't need to write it. They've already done it for you. Right?
+10:23 And for another thing, the algorithm I'm going to give you here is, you know, perhaps not the fastest in the world,
+10:28 but this is just designed to give you a feel for how to think about writing logic programs.
+10:34 And later on, we'll figure out how to make them go faster. All right.
+10:38 So, uh, what we're going to do is we're going to write a predicate, since there are no functions,
+10:45 and our predicate is going to be something like this sort of length will be true if L is a list and S is the sorted version of the list.
+10:58 Right. So it takes two arguments and a lot of time.
+11:01 When you think of an n argument function in a functional language, you'll have an n plus one argument predicate,
+11:10 and a logic language with that last argument corresponds to the return value of the function.
+11:16 Doesn't have to be that way. But if you're a refugee from Java or OCaml or something like that, it's a kind of a good way to get started.
+11:25 Right? So here we have a sort function. Except it's not a function, it's a predicate.
+11:30 And it's true if S is the sorted version of L and it's false otherwise.
+11:34 Right. So if we wanted to call it, we could, you know, do something like this sort.
+11:41 All right. And then uh three five minus two and then minus two, three, five.
+11:51 And that's going to succeed. Prolog. We'll say yes.
+11:57 Well, okay. In this sense, we haven't done anything more than we would get from an ordinary function call in a language like OCaml.
+12:08 But there's something extra Prolog can do for us, which is we can give it L and ask it to figure out s.
+12:18 So our goal would be to have something like the following work as well.
+12:23 If we give Prolog this goal sort.
+12:27 And this is the prompt by the way that Prolog the Prolog interpreter gives you at the top level three five minus two.
+12:34 Uh x. Right. What it's going to do is say, oh yeah x equals minus two, three, five.
+12:44 Think this is true. If you do this substitution right.
+12:48 The variables here start with capital letters. Predicate names start with lowercase letters.
+12:53 All right. So we want to define the source code for sort.
+12:59 And we're going to do that. This in a way that's as logical as possible.
+13:04 Right. We want to appeal to logic because that's kind of the basis of classical computer science.
+13:11 Right. And we teach you you know, and or not all that sort of thing.
+13:15 The philosophers have thought about logic for a while. We want to use logic to define sort.
+13:21 So this is going to force us, when we're writing our code logically, to maybe think a little bit differently than we did in CSS 31 and CSS 31.
+13:35 When they showed you bubble sort, they didn't ask you to define what it means for something to be sorted, they just assumed you knew it.
+13:45 It's obvious. Right? Well, here we're trying to tell the computer what we want and the computer doesn't think anything is obvious.
+13:54 We're going to have to spell out exactly the proper specifications for sort, something that was taken for granted in CSS 31.
+14:03 In that sense, logic programing is kind of annoying, right?
+14:08 Because yeah, you know, I don't want to say what I want.
+14:14 I just want to do it right. But there are big advantages to saying what you want.
+14:20 It will give the Prolog interpreter more opportunities of coming up with intelligent answers and answers.
+14:26 Maybe you didn't think of. So let's do that here.
+14:29 Let's say what it is, what it actually means for us to be a sorted version of that.
+14:39 Well, we can think of some things. First off, those lists had better have be the same length.
+14:44 Write the list of the same length so we can start writing down what the properties that we want.
+14:49 I think we want them to be the same length, but obviously that's not enough, right?
+14:57 You can have two lists of the same length, but one is not the sorted version of the other.
+15:01 What else do we need? If sort of RLS is true.
+15:10 Yes, we do have the same frequencies of each possible. Right.
+15:14 Each element in El has to appear exactly the same number of times as f.
+15:21 Right. And the mathematical term for that is that l and s have to be permutations.
+15:32 Permutations of each other. In particular, if there's duplicates in L, they have to be the exactly the same number of duplicates in S.
+15:45 That's what this notion of permutations captures. And notice once we say this is our requirement, this one follows from this.
+15:57 If lines are permutations then they have to have the same length right.
+16:02 So to some extent what we can do now as we're writing down our requirements, say, okay, this requirement subsumes this one and implies this one.
+16:11 So we don't need to write this one down explicitly. Just write this one down explicitly.
+16:15 And that's good enough. All right.
+16:20 Are we done? No. If that's the only requirement then we can just say, oh, uh, sort of x of X is true for any list.
+16:32 All right. Because any list is a permutation of itself. So this requirement is not enough.
+16:39 We have to add one more requirement. Right.
+16:43 Which is that's has to be sorted. The elements of S have to appear in non-decreasing order.
+16:53 If there's any duplicates they all have to be next to each other. So informally that's what the requirements that I want for my sort function,
+17:02 and the way I write that in Prolog would be something like this sorted of S of LHS is true if S is a permutation of L and sorted of does so.
+17:18 This is a formal statement that is equivalent to this informal English, and the punctuation here means as follows.
+17:26 This means if I write this top level comma means and the internal commas are just separating arguments to predicates.
+17:38 But a comma at the top level means. And it's a little bit confusing.
+17:43 I probably would have picked an ampersand, but that's the syntax that they use.
+17:48 And the way you read this as a logical statement is as follows.
+17:54 For all L and S, if perm of ls is true and sorted of s is true, then sort of ls is true.
+18:05 Prolog interpreter doesn't know anything about sorting. All it knows about, at least so far is this logical implication.
+18:13 That's it. And you know, and until I tell you the meaning of those, uh, predicate names, that's sort of a very high level state.
+18:23 All right. Any questions about this definition of sorts?
+18:31 Now, if I feed this into a Prolog interpreter where these predicates are not always ready built in, this is not enough, right?
+18:40 What I'd like to do is specify, sort all the way down to the bare bones, all the way down to.
+18:48 Here's the first element of the list. Here's the second out of the list. You know they're in order or something like that.
+18:52 And I haven't done that because I haven't defined what it means to be a permutation.
+19:00 Right. This predicate still needs to be defined, and I haven't defined what it means to be sorted.
+19:06 Of the two, this one's simpler. So I'm going to do this one first order.
+19:12 So here we go. First off the empty list is sorted.
+19:19 You write the empty list this way. Similar syntax is OCaml.
+19:23 Uh Prolog uses commas instead of semicolons.
+19:27 So in that sense it's more like ML rather than uh,
+19:31 and it's not a coincidence because Prolog and ML were designed by people that
+19:36 worked down from the hall from each other at the University of Edinburgh.
+19:40 All right, second rule. All right. The second idea about sorted is that any singleton list is sorted.
+19:51 Okay. The way you write a singleton list is like this.
+19:55 The capital letter says this is a logical variable.
+19:59 And this says you know, the empty list is sorted.
+20:03 This says for all x, the singleton list containing x is sorted.
+20:09 Prolog. Has the same sort of rule as ML in that if a variable appears only once.
+20:16 By convention we replace it with a single underscore.
+20:21 So a single underscore stands for a nameless variable.
+20:24 Every underscore you see in the program is a different variable. All right.
+20:29 So those are in some sense the two base cases for sorted.
+20:34 There's the easy case. Now we'll do the recursive case.
+20:38 We're going to define what it means for a list to be sorted if it contains two or more elements.
+20:47 All right. The Prolog notation for that is this.
+20:56 All right. This stands is a pattern that matches any list whose first item is x.
+21:04 Second item is y and it's the rest of the list is L.
+21:08 Right. So the list has to be at least length at least two and it can be longer.
+21:14 If I were to write this pattern in OCaml, I'd write it this way.
+21:24 Because if you recall an L camel colon, colon means build a list out of a head and a tail.
+21:31 The implied parentheses are here, right?
+21:35 And so this is a pattern that matches any list of length two or more x is the first item, y is the second item, L is the rest.
+21:43 Right. Yes. Question is x comma Y passes through all list.
+21:48 Uh, well this whole thing passes as a list of length at least two.
+21:56 And you know, you can write a list like this, right? That's fine.
+22:01 Right. Or, um, I could write the exact same list this way.
+22:13 These two notations stand for exactly the same thing.
+22:16 Right. Because this is a list of length at least three, and the tail of the list is empty.
+22:21 Well, that's the same as this, but nobody would actually write it this way.
+22:26 They're going to write it this way. All right.
+22:30 So this list is sorted. If what?
+22:34 Well first off x is has to be less than or equal to y.
+22:40 And Prolog writes it this way. The less than or equal to operator is written backwards from what you're used to.
+22:49 The reason for that is that when Prolog was developed, one of its first applications was natural language parsers,
+22:56 and the people writing natural language parsers like to use arrows all the time.
+23:00 And they figured, let's use the arrows for parsing.
+23:03 And, uh, then we'll, we'll, we'll do the less than or equal to sort of the reverse way because then we know it's not an arrow.
+23:11 All right. And then, uh, of course we need the rest of the list to be sorted recursively.
+23:21 Right. So that's the logic for sorted.
+23:29 However, you have to be careful when you're writing down the logic for what you want.
+23:35 You can make mistakes. You can have the logic for the wrong thing.
+23:41 And that's what I've done here. This is the wrong logic for sorted.
+23:47 It's busted. Because all it checks at is that the first two items are in order, and then ignoring the first two items, it checks everything else.
+23:59 Which means according to this definition, this list is sorted 1324.
+24:05 Right, because the first two guys are sorted and then the tail of the list is sorted, so we're fine.
+24:11 Well, obviously that's bogus. I screwed up.
+24:16 I used the wrong logic. Okay. In order to fix that, there's several possible fixes.
+24:25 But one possible fix is to say, oh, well, here, let's make this y cons l, right?
+24:34 This is a list of length at least one. The head is y.
+24:37 The tail is L. Right. So if I were to write this in ML, I would write it this way.
+24:44 If I were to draw a picture of it, it would sort of look like this, right.
+24:47 Here's y and here's L. This one is x y l right.
+24:56 And then okay, this list which is length at least one has to be sorted.
+25:01 And now I fix the bug. Right.
+25:04 Because now when I recurse I will get the entire tail of the list rather than just the tail of the tail.
+25:13 And I'll check to make sure that three is less than or equal to two, which it isn't.
+25:17 And then I'll fail. Okay.
+25:23 So if we now at the top level ask sorted the question is this list sorted?
+25:37 The answer will be no, right? It says yes for things that succeed.
+25:42 No for things that fail. Or you can think of yes as being true and no is being false.
+25:49 Okay, so I've sort of defined this sorted all the way down to the bare bones.
+25:57 We I'm still appealing to this thing.
+26:00 Right. This operation here is built in. Right.
+26:05 So I assume you know what. Less than or equal to work.
+26:09 How it works on numbers. It's the usual thing. So we have that sort of in Prolog that dials down into machine code and all that sort of thing.
+26:17 But everything else about sorted, you see the entire source code, that's all.
+26:21 There it. Okay. Now we'll do the hard one.
+26:30 Hard. One is perm. All right.
+26:35 And what I'd like to do with perm is start working on it.
+26:38 Sort of the way I worked it with sorted. All right.
+26:43 So we perm is something that takes two arguments and it succeeds if the arguments are lifts and the first one is a permutation of the second one.
+26:53 All right. So the simplest case here it's going to be the empty list.
+26:57 That's good. All right.
+27:02 And then the second case can be a singleton list. And that's pretty easy.
+27:05 There's only one possibility right. Notice I have to call this thing x here I can't use underscore because if I used underscore
+27:18 it would say any single item list is a permutation of any other single item list.
+27:24 I don't want to do that. The lists have to have exactly the same members.
+27:30 All right then for two item lists.
+27:35 I can do something like this. Any two item list, of course, is a permutation of itself.
+27:44 And it's a permutation. Of its reverse.
+27:54 And I can keep going. Right. I could now start doing three item lists.
+28:00 There will be six clauses for the three item lists.
+28:05 And then I could do four item lists. And it's going to be 24.
+28:08 That's it's just not going to scale right. So at some point I want to sort of get out of this.
+28:13 Let's write down each special case. And I want to write a recursive rule that specifies what it means for one list to be a permutation of another,
+28:25 if we already know how it works with shorter lists.
+28:30 All right, all right. So let's go here and say let's take a list whose length is at least one.
+28:41 So it's ex-cons L. And we want to put something here before we decide what to put there.
+28:49 Let's draw a picture of it. Right. Here's x cons l right l could be empty.
+28:57 It could be pretty long. So I'm sort of drawing it this way. To say it can be any length you like.
+29:02 Right. And what does it mean for this guy?
+29:06 I don't know what it is. For now, I'll just call it. Ah, you know, some some other list.
+29:12 Okay. What does R have to look like.
+29:15 Well here's a picture of R. It has to have X in it somewhere.
+29:22 Otherwise it's not a permutation. And also all of these guys everything that's not x has to be a permutation of L.
+29:33 Right. So we can call this region I don't know p1 and this p2 right.
+29:42 And the idea here is that if we scramble up P1 and scramble oh no that's not right.
+29:50 Let's do it a different way. Let's concatenate P1 and P2.
+29:55 All right. Like this. All right here's P1.
+30:00 Here's P2 right. All we require here is that scrambling up L gives us this concatenation like that.
+30:11 So all these guys sort of permuted we got P1 concatenated with P2.
+30:17 And then we make a little room for x.
+30:21 And then we're done. Right. And in some sense that's what it means for something to be a permutation.
+30:29 If it's a permutation you can do that. You can draw a diagram that's like that.
+30:34 And if you can draw a diagram like that, then it's a permutation, right?
+30:38 We sort of we've defined what it means to be a permutation.
+30:43 All we now need to do is take this picture and turn it into logic.
+30:52 All right. Well, uh, how are we going to do that?
+30:57 Well, we can do something like this.
+31:01 Let's take a permutation of L, and we'll call this permutation p.
+31:10 Here's p, right. L get scrambled into p, right.
+31:14 And then we are going to divide p into two pieces using a predicate that I'll call append.
+31:24 It takes three arguments. And the idea is that a.
+31:29 This list to this list gives you that list, right?
+31:34 All right. Once we have that, we can say okay let's append.
+31:41 To p1. X cons p2.
+31:48 All right. That's this thing. And that's our list are. All right, so read logically.
+31:57 What I'm saying here is that for all x, L, r, p1, p2 and p if prime of lp and append of p1, p2,
+32:09 p and append of p1 ex-cons p2 are then prime of x cons l and r I just, you know,
+32:19 took this logical statement and read it out loud in a very low level way.
+32:23 But that's kind of what the Prolog interpreter will see.
+32:26 [INAUDIBLE] say, oh, okay, now I know what you mean by permutation.
+32:33 That's the definition. It's a logical statement of what you want for something to be a permutation.
+32:44 Once we see this, we can simplify these previous clauses, right.
+32:54 Because some of them are redundant now. I mean, they're all true.
+32:57 They're all valid. They all you know, they're consistent with what we mean by a permutation.
+33:02 And if anything satisfies and it's a permutation,
+33:05 but they're not particularly efficient because now we have multiple ways to prove two item lists or permutations of each other.
+33:16 We can apply this rule and then recurse or we can apply this.
+33:20 So we're going to simplify the code by erasing these two we don't need.
+33:28 Even more. We don't even need this one. Right?
+33:34 Because this subsumes that.
+33:35 If you can take a single item list where L is the empty list and do all of this stuff, well, the permutation of LP p will be the empty list.
+33:46 P1 and P2 therefore have to be the empty list p1.
+33:50 The empty list concatenated with the singleton list X gives you the singleton list that's done right.
+33:55 So this rule sort of subsumes this one.
+33:59 We can erase this one too. And that makes our perm simpler than it was before.
+34:04 It was logically correct either way, but we want our logic to be as simple as and as clear as possible.
+34:13 So we have a clarity win here. Also, by making our program shorter it's going to be more efficient.
+34:24 All right. Any questions about per. Yes.
+34:32 Oh that's a good question. So so in fact we had even had this question up here right.
+34:38 So here we have these variables. So the basic idea is as follows.
+34:42 Anything that begins with a capital letter and Prolog is a variable a logical variable.
+34:47 And the scope of a logical variable is the clause that appears in right clauses.
+34:52 One of these things ending in a period. So you don't need to declare them.
+34:57 You just write their names and there are logical variables and they're good, right?
+35:02 And so in some sense Prolog is takes a pretty relaxed attitude about declaring a variable.
+35:08 You don't need to declare them all. Just use the middle. Figure it out. Okay.
+35:13 Other questions about perm or sort or sorted.
+35:17 We're not quite done yet, right? But we're getting there.
+35:26 Okay. The thing that's left over here, I'm assuming that less than or equal to is built in.
+35:33 We've defined sorted we've defined Perm in terms of itself but also in terms of append.
+35:42 So there's this third predicate append which we haven't yet done.
+35:46 All right. So let's do that over here. So here we go.
+35:57 Append. The base case of append is if the first list is empty, right?
+36:05 Appending the empty list to any list just gives you that list.
+36:10 And the recursive case is going to be appending a non-empty list.
+36:18 And remember that the scope of logical variables there only extends into the clause they appear in.
+36:25 So this L has nothing to do with these L.
+36:29 There are independent variables right? And here we will get a list.
+36:34 Well let's draw a picture again. We've got ex-cons L here.
+36:39 We've got M over here. We want to have a single list that contains all these three things in a row.
+36:45 And what we know about that single list is it has to start with X.
+36:49 So let's write it down here. And what we can do is we can call this list LM say and we'll do that.
+37:00 And that's true if the result of appending L to M gives you lm.
+37:14 So notice that append is defined in terms of itself, but it doesn't use any lower level primitives.
+37:20 We have now completely specified down to the like the bare bones of machine code for less
+37:27 than or equal to what it means for one version of a list to be a sorted version of another.
+37:36 And we didn't say use bubble sort.
+37:41 We didn't say use heap sort or merge sort or anything like that.
+37:46 We just said, here's what we want. And the cool thing about Prolog is that you can give these predicates.
+37:53 You might want to change their names so they don't collide with the existing ones into the system and ask it a question like this.
+38:01 Sort of three. Oh, uh, well, this one right here.
+38:07 I've already done it. This works. The Prolog interpreter is smart enough to look at the logical specs for what you want, and give you the answer.
+38:18 It's really cool. Now this simple example has a catch.
+38:30 And the catch is so big that if you actually wrote this code as part of your job for some, I don't know,
+38:38 finance firm or something and said, okay, boss, this is the code we're going to use for sorting.
+38:43 Your boss would look at you and said, what school did you go to?
+38:47 This is terrible code. The reason it's terrible, though, is not because it has bad logic.
+38:54 The logic is right. The reason it's terrible is it has bad control.
+39:00 This is an inefficient program to do sorting because the Prolog interpreter will figure this out.
+39:08 But what's the algorithm that it uses? It always answers questions left to right, top to bottom.
+39:17 I'll give more details about that later. So when you ask a question involving sort, the first thing it tries is to try perm.
+39:27 And what's perm going to do. Well it's going to generate a permutation.
+39:33 And if you will see later exactly what it does, the first permutation it's going to generate is the original input.
+39:42 And then the Prolog interpreter will say hey is that sorted? And the answer will be no, because it's not, at least not with that input.
+39:51 And then the Prolog interpreter say, oh, let's try perm again. Perm will generate another permutation, and then it'll check to see if that sorted.
+39:59 And if that doesn't work, it'll generate another one and see if that sorted.
+40:04 What's the efficiency of this algorithm? Factorial order of n factorial.
+40:13 Right. So that that's really depending on how long it takes for the distribution, how long it takes to do one another permutation.
+40:20 Uh, yes. Uh, but it, it, uh, I hand wave my way through that.
+40:24 But if we actually follow the steps that perm will do, it is really going to be order of n factorial will be quite a permutation in that order.
+40:35 Well, just to create the permutation is going to require order of n if it's an n item list, right?
+40:41 But this thing will generate all possible permutations the way that we're using it.
+40:46 And that is going to be at least order n factorial, right.
+40:51 So how does that compare with the worst sorting algorithm you learned in CSS 31, which was what bubble sort or insertion sort?
+41:02 Those were order n squares. They're way better than this.
+41:05 This is the like this is like the worst possible sorting algorithm.
+41:10 Well, you can come up with slower ones, but it's really bad. Needless to say, you don't want to really write Prolog code like this.
+41:19 And in fact, if you look at the source code to G Prolog,
+41:22 which is the one I'm suggesting for doing the homework, it has an implementation implementation of sorts.
+41:28 It's implementation is written in Prolog, but it's not written this way.
+41:34 It's written in a in a way that's much faster, but it's more complicated.
+41:40 And I didn't want to get into the details here. I just wanted to do logic in sort of its highfalutin way.
+41:47 Okay, so that's kind of the big picture.
+41:53 Um, any questions so far?
+41:58 In some sense, it almost seems like magic. Yes.
+42:02 So in the interpreter, if there are multiple possible values as an answer to say, oh, um, what what it'll do is, um,
+42:13 if there's multiple answers, which, uh, you know, there can be, uh, even with sort if you give it this question.
+42:22 Sort is really dumb. It'll notice that they're equal to each other, and then it'll say, oh, uh, r equals three.
+42:33 Three is an answer, and then it'll stop.
+42:37 If you want to see another answer, you type semicolon I'll circle it.
+42:41 That means you're typing it. And um then it'll say, oh here's another answer R equals three three.
+42:49 Oh right. And uh, to make that more concrete, suppose the original question looks like this three and 3.0.
+43:00 This will say point zero. And this will have it reversed right.
+43:07 Right. And both of those are valid solutions.
+43:11 So it gives you both right. And in general you know it can give you n factorial answers.
+43:19 If your question is of length n if all the items are numerically equal.
+43:24 Right. That's not maybe not what you wanted, but that's what what the logic says.
+43:28 So it gives you that answer question.
+43:33 It's like we intro type versus oh yeah, the the less than or equal predicate is a numeric comparison.
+43:42 And integers compare equal to um uh floating point numbers.
+43:46 If they're numerically equal. So -0.0 is equal to zero right.
+43:50 And we also have these two lists that we're implicitly trying to see if they're the same.
+43:55 Well here uh uh but uh oh come on help us.
+43:59 Yeah. We have to see if else the same size. Yeah, we have to see that LM is a concatenation of L and M, right?
+44:08 Oh, yes. Say that. Else I say was that also? Just for one, just have a F like, uh, uh, every weight and see if two things are equal.
+44:17 And if so, uh oh. Okay. I think I see what you're saying.
+44:21 Yeah. The, uh, we have to be careful here because there's numeric comparison, which is what this is using.
+44:30 And then there's sort of equality, which is what we've been talking about over here.
+44:36 They're different things. Equality requires kind of an exact match.
+44:41 Whereas numeric comparison is going to, uh, you know,
+44:44 allow 0.0 and zero to compare equal even though they're actually different in this base case will not walk through this.
+44:52 Oh, this thing here. Oh yeah. If L is a long list in general this can cost order n.
+44:57 Absolutely. Yeah. And that's that's an efficiency issue right.
+45:01 I did say you know this is bad. Control will automatically get personal members.
+45:08 It will. To do a value comparison which is not numeric.
+45:13 It's, it's, you know, so zero won't, won't, uh, unify with 0.0.
+45:18 They're different. Different values. Yes.
+45:22 On the definition for from like the interpreter. Uh, how does it know, uh, sort of what values to put in here?
+45:35 It's it's goal oriented. So it's.
+45:38 But when you ask it a question, it matches the question to the head of the clause.
+45:44 That's this thing here. And then once it's done that it'll know what Excel and RR or at least will have some idea and then it'll use that here.
+45:53 But, uh, you've hit on an important point here.
+45:57 As computation goes on in Prolog, it's quite common for a logical variable value to be I don't know.
+46:06 I don't know what it is. Not yet. I'll figure it out later.
+46:10 And that's quite different from the way, you know, functional languages or imperative languages.
+46:15 If you want to know what a variable's value is, you just look it up. There it is.
+46:18 Right? There's never any question about what it is, but with Prolog, it's quite common for a logical variable to just stay.
+46:27 I don't know what it is. It's, you know, what's the value? Well, it's, uh, we'll maybe we'll figure it out later.
+46:32 Maybe not. All right. Let me do an example of that.
+46:40 Uh, suppose we asked Prolog this question. A pen pal.
+46:48 Um, and. All right.
+46:54 In effect, what we're doing here. Again, remember, every clause this counts as a separate clause have separate logical variables.
+47:01 So these 11 M's and ends are independent of that. Right. Maybe to make it clearer I'll make I'll spell them differently.
+47:09 I don't have to, but I will I'll just say append xyzzy. And this tells Prolog.
+47:16 Please find x, y and z such that this predicate is true.
+47:21 I don't care anything about them. Just tell me the values. And what Prolog will do is it will say, oh, I'm goal oriented.
+47:30 Let's find the first clause that talks about append and we'll match it to this.
+47:37 And when we're done we'll say, oh x equals l I'm sorry, x equals the empty list, y equals l and l equals z.
+47:47 So it'll say oh y equals z. It won't bother telling you about the variables in the clauses that it called.
+47:55 It'll only tell you about things it discovered about the top level variables.
+47:59 And that's what it'll say. Right. Which is a valid answer.
+48:04 Right. Any sort of uh, sort of list here in which X is did I get this right.
+48:13 Yes. Right. And in fact, this tells you something even weirder, which is if you call this.
+48:27 The answer will be a. Right.
+48:32 So this, logically speaking, is a predicate, not just about lists.
+48:40 It's also a predicate about improper lists, that is, lists that are terminated with something other than a list or the empty list.
+48:49 And any value is an improper list of length zero, so to speak.
+48:55 Right. So you can put anything there you like as long as you're consistent.
+49:01 The other thing you can do here is Prolog will pause and it'll say, oh, well, you know, here's an answer, but I got more.
+49:09 And then at this point you can type semicolon if you like. And what will happen is it will backtrack.
+49:15 It will say, well, the caller didn't like this match.
+49:20 We'll try this one right. When it tries this one, it will bind our toplevel x to this.
+49:28 It will bind our Toplevel y to this. And I'll bind our Toplevel z to this.
+49:33 Right. And it will get something that looks like this.
+49:37 Right x equals underscore 29.
+49:42 This is a new logical variable that Prolog just invented for the purpose of giving you an answer.
+49:48 Right. And then uh, and then z equals underscore 29 vertical bar.
+49:57 Um, uh we'll get there Z equals -29 vertical bar y.
+50:05 There we go. That's another answer to your question.
+50:11 And the answer says any list of length one.
+50:15 If you concatenate that to Y you'll get a list that's one longer than what you started off with.
+50:23 And its first element will be the same as the first element in your initial list.
+50:30 And it will then say, I've got some more answers.
+50:33 So sit here. You can now type semicolon again, and you can probably guess what's going to happen.
+50:38 It'll come up with yet another list. It's 29 -17.
+50:44 Whatever. This underscore not minus and z equals 2917 y.
+50:53 Something like that. So any to the item list concatenated with anything gives you a list of length two or more.
+51:02 You can type semicolons indefinitely and you will get more and more answers.
+51:07 There's an infinite number of answers, so Prolog is perfectly willing to keep iterating until it runs out of stack space or something.
+51:15 And question underscore number is an variable.
+51:20 Yeah. This is a logical variable. Uh, you know, it uses the same syntax for variables that C does.
+51:26 Right. Uh letter or uh or an underscore at the start and then letters or underscores or digits thereafter.
+51:33 By convention system generated variables look like this okay.
+51:41 Well, this one is kind of weird.
+51:43 And normally you wouldn't ask a question like this, but there is a more common question that you could ask of a pen that might look like this.
+51:54 This one's more feasible. All right.
+52:09 So what's going to happen here if we ask Prolog this question first it tries the first append clause and our x will be the empty list.
+52:20 All right. That's supposed to be a comma. Y will match l l matches this list.
+52:29 So we'll say oh y equals 3 to 19.
+52:35 If we then type semicolon it will then try the second clause.
+52:41 And here I'm going to go into more detail. Uh I normally don't like to go into this much detail.
+52:47 This is almost like looking at machine code when you're executing Java or something.
+52:51 But all right we'll give it a try. Internally it'll say, oh, um, in order to get this to work, we have to let something like this happen.
+53:01 X is going to be equal to x1 cons L1 and I'm putting subscripts after this.
+53:09 What this x and l to indicate that we're using variables from the second clause up here.
+53:15 And we're using them for the first time. And in fact temporary variables.
+53:19 One way to think about it is that whenever the Prolog interpreter enters a clause, it feels a little bit like a subroutine call in Java or C,
+53:31 and whenever you call a subroutine, you get a fresh copy of the local variables, right?
+53:36 So here's the copy of the local variables that we get when we're entering that second clause.
+53:42 Right. And then y is going to be equal to m one.
+53:47 Right. And then um three 219 is going to equal that.
+53:52 Which means x has to equal three and LM one has to equal two and 19.
+54:02 All right. And because x has to equal three oh no I'm sorry.
+54:11 That's x one has to equal 3X1 has to equal three.
+54:15 We know that this x one has to be the same as that x one.
+54:18 So we can simplify by doing this right.
+54:25 Right because x one has to equal three. And once we've done that we can not bother to write this down.
+54:30 The Prolog interpreter does this sort of optimization internally all the time.
+54:34 So we take these substitutions and now we have a subgoal.
+54:41 Our subgoal is append of L1M1 and lm one.
+54:45 All right. So here's our subgoal append of L1 um m1 which is y and lm one which is two and 19.
+54:59 All right. So it's like we're calling a subroutine. And that subroutine is recursive.
+55:06 And it calls itself. And here's our subgoal. We apply the same rules to the subgoal that we did to our original goal.
+55:14 So we first take this subgoal and we match it to our first clause up there.
+55:21 And we will say, uh, all right, let's see. Oh, this is supposed to be an L1.
+55:25 So L1 is the empty list. And um, these two guys have to be the same.
+55:33 So y equals two and 19. All right.
+55:39 So all this stuff in here I'll put a little dotted line around it.
+55:44 This is what is going on inside the interpreter. But once we get to here we've done we've found a different way to prove that this is true.
+55:54 And then Prolog interpreter at this point will, you know, proudly announce to you I've got another solution.
+56:00 What's the solution? Well, what's x?
+56:05 X is equal to three cons L1 L1 is the empty list, so x is equal to three.
+56:12 The second thing we asked is what's y what's y y is equal to m1.
+56:18 And m1 is where did we get it at.
+56:22 Oh y is equal to 219. There it is. So the stuff inside the dotted lines you don't see.
+56:31 But at the top level Prolog tells you that's an answer and it is another answer to your original question.
+56:38 You can probably guess what will happen now if you type semicolon again.
+56:45 What's going to happen is that this inner subgoal will say, oh, the first clause didn't work.
+56:51 Let's try the second one. We'll get a sub subgoal.
+56:56 And once you go through all the substitutions of the sub subgoal, we'll come up with another answer that looks like this.
+57:03 Three to y equals 19.
+57:11 If we keep typing semicolon, we iterate through all possible answers.
+57:18 19. Y equals the empty list.
+57:22 Right? Uh, and then if we type semicolon again, we get.
+57:29 No. Keep typing semicolons.
+57:33 It basically you're saying please iterate through all possible answers.
+57:37 The question in the end. It'll say, I have no more answers.
+57:41 Right. So we get four answers to the question because there's four ways to answer.
+57:49 In effect, what we've done here is we've defined an append predicate and we know it's a predicate, not a function, because we can run it backwards.
+58:01 Right. Normally you think of this kind of append is taking a function.
+58:05 It takes two arguments, gives you the concatenation of the result.
+58:09 Right. In a functional language, that's how it works. Just one answer.
+58:12 But here we can give it the result and ask it to back calculate what the inputs look like.
+58:19 And it works. So this is an example that in some sense shows you some of the power of Prolog.
+58:27 You can think you can sort of run what you would have thought of as being a function and run it backwards.
+58:34 Now, I should warn you that it doesn't always work right?
+58:41 Sometimes Prolog is not as nice as this, but in simple predicates like append and member will see member as being another one example.
+58:51 It actually tends to work fairly well, and to some extent we took advantage of this append property of this property that append can be run backwards.
+59:04 When we wrote our code for permutation. Because what happens internally here when Perm calls itself internally, first it computes a permutation.
+59:17 This is an actual list, right? But then when we call append we know what p is.
+59:24 But we don't yet know what P1 and P2 are. And when this call to append runs, it'll be run like this.
+59:32 It'll be run backwards. It'll give you all possible ways of appending two lists to give you, and then for each way it will then run this.
+59:42 This will run forward. It'll only be one answer, but this one is being run backwards.
+59:48 And because it's run backwards and because it can give you alternate solutions, that means perm itself can give you alternate solutions.
+59:59 You can call perm with a single argument, and if it's a three item list, it'll give you six solutions.
+1:00:05 Because of the way the recursion works and because of append running backwards.
+1:00:13 All right. Any questions on these predicates. Yes.
+1:00:17 So some of said we're filling you can first so that we don't find a meaningless piece that.
+1:00:25 Oh very good question. Right. So suppose we did this.
+1:00:30 All right. And move it up to here.
+1:00:33 Right. Unfortunately that makes the performance even worse.
+1:00:39 And the reason it makes it worse is if we put this here okay then p1, p2 and P, well, we won't know what any of the values are.
+1:00:50 We'll put it at the end. Oh I like this. Move the second and end to the top of the second.
+1:00:57 Append to the very top I see. So, uh, we'll do this.
+1:01:03 And we'll move it up here. Okay. Unfortunately, we still have a good chunk of the same problem.
+1:01:10 If we do this first, and assuming we know what X and LR, we'll know what X is.
+1:01:17 But we won't know any of these other things.
+1:01:20 So we'll be asking, can you, uh, can you append any list to any list beginning with X and give me a list and it will say,
+1:01:28 sure, there's an infinite somewhere number of solutions, and I'll give you the shortest one first.
+1:01:34 Right. And so in some sense that's going to make our performance worse because now there's an infinite number of solutions.
+1:01:40 Right. And to some extent, you know what's going on here. This kind of reasoning is control reasoning.
+1:01:46 Logically these are connected by and right this and this and this and this commutative and associative.
+1:01:54 Right. You can reorder stuff any way you like. So moving this around does not change the logic, but it does change the control.
+1:02:02 Because Prolog is fairly blind. It always does things in the order that you specify it, and if you do things in the wrong order,
+1:02:08 you can make them less efficient or even terminally inefficient.
+1:02:12 They'll go into a loop. And that that's a real problem with Prolog.
+1:02:16 I don't want to sugarcoat it. Okay.
+1:02:22 Yes. So if you did this to the 12, would it be in error?
+1:02:28 Oh, it would run. It would disappear. It would, it would it would run.
+1:02:32 And it actually might give you, uh, answers at first.
+1:02:37 But if you kept typing semicolon, it would keep, you know,
+1:02:39 eventually it would loop or keep giving you and it would instead of being order n factorial,
+1:02:45 it might be order in factorial squared for a while and then loop.
+1:02:48 I mean, the performance would really be bad. You'd never get a wrong answer, but you wouldn't be happy with the efficiency.
+1:02:58 Okay. Other comments on this example. All right, why don't we take a break and we'll start up again about ten past the hour.
+1:09:58 All right, let's start up again. So I want to talk a little bit about the Prolog syntax.
+1:10:06 After all, we spent the first three weeks or more of the course talking about syntax.
+1:10:10 That seems like we should talk about the syntax of Prolog.
+1:10:13 It's pretty simple syntax at its core, but then it has extensions that make things more interesting.
+1:10:21 All right. So we'll first start with a core. And so basically the idea of Prolog is that it's built out of terms.
+1:10:33 And a Prolog term. Is one of the following.
+1:10:40 First you can have what's called an atom. These are sometimes called symbols.
+1:10:45 In other languages. They're atom because they're atomic.
+1:10:50 Each atom is unique and it equals only itself doesn't equal any other atom or number or anything else.
+1:10:57 Right? That's just itself.
+1:11:00 The syntax for an atom is either a lowercase letter followed by, you know, as many letters and digits as you likes and underscores as well, right.
+1:11:14 Like that. So here's an example a, b, c.
+1:11:18 Here's another example a nine underscore x.
+1:11:22 Right. Those are all atoms. Or if you like, you can put an arbitrary set of characters into an atom by quoting them.
+1:11:32 So you can do something like this. And you can put any characters in here.
+1:11:38 And you can even put an apostrophe in there if you double it, right.
+1:11:45 So in particular, uh, here's a single atom.
+1:11:52 Whose name is o'clock with just a single apostrophe says O apostrophe c l.
+1:11:57 Okay, that's how you that's the syntax for that at it, right?
+1:12:01 But like any other atom, it's just itself. It does not have a value.
+1:12:07 It's just, you know, something you can't split apart.
+1:12:11 That's all it is. All right. Um, the next thing you can have in Prolog is a number.
+1:12:21 Every number is a term, and Prolog uses kind of the same syntax for numbers that see in other languages.
+1:12:27 Do you have integers? You have floating point, all that good stuff. I'm going to skip over it since it's all pretty straightforward.
+1:12:34 The third thing that you can have in a term is a logical variable, or just variable for short.
+1:12:43 The syntax for a logical variable, it's like atom, except the first letter has to be capital letter or an underscore.
+1:12:51 After that it's the same as before. So here is a logical variable.
+1:13:03 There's a logical variable all that sort of thing. Now these are quite different from atoms because they can have values okay.
+1:13:14 But the thing about logical variables is they're a little bit smarter or maybe I should say different from variables in other languages.
+1:13:23 In the following sense they start off. Unbound.
+1:13:32 An unbound logical variable has as its value in some sense just being a question mark.
+1:13:39 I don't know what the my value is yet. I'm unbound. Okay, it's not invalid or illegal or anything like that to refer to an unbound variable.
+1:13:50 That's okay. You know, if you're talking about a language like Fortran or C, if you try to access an uninitialized variable, it's an error, right?
+1:13:58 Or it leads to undefined behavior or something. That's not the case here. An unbound variable.
+1:14:03 You know, it's just I don't know what it is yet, but once I figure it out, you know, I'll be updated accordingly.
+1:14:10 All right then, as computation succeeds.
+1:14:23 Each logical variable can become bound. Doesn't have to be, but it can be.
+1:14:32 And when it's bound, it's bound to a value. And its value will be a term of some sort.
+1:14:41 Okay. Once a variable is bound to a value, it won't change.
+1:14:48 You can't. There's no assignment statement in Prolog like there is in Java or Python or C.
+1:14:55 A variable become. It starts off being unbound. As you succeed, it gets a value and then it's stuck with that value.
+1:15:02 Except it's possible for a Prolog computation to fail or to backtrack.
+1:15:09 Right. And then it becomes unbound again.
+1:15:20 On failure or backtracking. We saw a bit of that in the sort predicate.
+1:15:32 Right. Sort calls perm. Perm says, oh, here's a permutation.
+1:15:37 When it does that, it binds the value of s to something.
+1:15:42 The permutation we then call sorted sorted a that's not sorted.
+1:15:46 It backtracks as it backtracks into perm.
+1:15:50 That variable becomes unbound again, which will let perm bind it to a different value next time.
+1:15:56 Right. So these variables are, you know, in some sense more restricted than they are in Java or, or Python.
+1:16:07 Because in those languages you can change a variable to any value whenever you like, as long as the the right type.
+1:16:14 But in Prolog, the only way you can change of variables value is to fail and then succeed in a different way in some other part of your code.
+1:16:23 So there's more discipline on what you can bind values to than there is in conventional languages, right?
+1:16:32 So in some sense you can think of binding or binding as being sort of like assignment, but it's a restricted form of assignment.
+1:16:45 The last category of terms is the category of structures.
+1:16:54 In some sense, the word structure is, uh, it's derived from the same word that data structures are.
+1:17:01 And that's really what a structure is. It's a term that stands for a data structure.
+1:17:05 The syntax looks like the following. You write some atom, you write a left parent, you write a bunch of arguments.
+1:17:18 And you write a write for n. Unlike many programing languages, you have to have at least one argument, right?
+1:17:26 So n has to be greater than zero. You're not allowed to just say open and close parentheses.
+1:17:33 Each of the arguments to the structure is a term.
+1:17:38 But this thing has to be an atom. And intuitively what's going on is the following.
+1:17:45 Whenever you write a structure like this, it's a term that stands for the following.
+1:17:50 It's a little vector. The first word of the vector is simply that Adam.
+1:17:58 Adam. Internally, you know, they're atomic things. Internally they're represented by pointers to something.
+1:18:03 So that might be the pointer to the representation of the atom. But it's just a word.
+1:18:07 And the rest of the words in this structure are the arguments which are other terms.
+1:18:13 Right. So this is term one, term two hears term and that sort of thing.
+1:18:19 Uh, maybe I should put a dot dot dot here. So when you write a term in Prolog you're really just building a data structure.
+1:18:28 The syntax of a term looks like a function call.
+1:18:32 And in fact there's some terminology here that sort of suggests that this atom, the atom part of a structure, is called a functor.
+1:18:46 Or sometimes called a function symbol. But we have to be careful about this terminology because it's just a function symbol.
+1:19:00 A structure is not a function call.
+1:19:04 It's in some sense the name of a function call, perhaps if you want it to be that.
+1:19:09 But there are no functions in in Prolog, and we're not calling a function when we write one of these things, we're just building a data structure.
+1:19:17 Another way of thinking about it is that a structure, if you think of it as being like a function call, it's like a constructor.
+1:19:25 That's all it's doing. It's constructing a piece of storage and, you know, plopping a bunch of stuff into it.
+1:19:31 Done. Yes. Adam was an arbitrary name choice, right?
+1:19:35 Yeah. Oh, no. What I mean by here is you have to put an atom here of some sort.
+1:19:42 Uh, so. So maybe I'll do it this way.
+1:19:46 I'll just say, you know, you have some functor F, right?
+1:19:50 F must be an atom. F is an atom.
+1:19:55 So syntactically it has to, you know, have one of these things up there.
+1:19:59 It's like a tree. Yeah. Yeah. You're building a tree?
+1:20:02 Absolutely. You're building a note in a tree. And, uh, when you write something like this, n is called the arity.
+1:20:14 Of the structure. So you have, you know, a unary structure, arity one, binary structure, arity two, and so forth and so on.
+1:20:21 And oftentimes you will want to sort of give this functor a name.
+1:20:26 You will call it f slash n right.
+1:20:30 So for example when we wrote append we were defining the predicate append slash three.
+1:20:39 Because when you write down predicates you write them using terms.
+1:20:45 And in the append predicates the definition of the append predicate, all the terms and all the clauses have three arguments.
+1:20:53 So that's the functor append slash three.
+1:20:56 And in some sense it's also a, uh, a handy name for the append predicate that we wrote down.
+1:21:03 Each functor is independent in the sense that append slash two and append three have nothing to do with each other.
+1:21:14 We could write another predicate called append with two arguments, and it would operate completely independently of our three argument append.
+1:21:21 They don't collide with each other at all. Okay.
+1:21:27 That's it. I love it when I can finish the syntax for a programing language on one whiteboard.
+1:21:35 That means it's nice and simple. Except I cheated a little bit and I cheated by only showing you the core syntax of Prolog.
+1:21:46 I didn't show you any of the syntactic sugar that people commonly use, in which I've already used in the earlier part of this lecture.
+1:21:54 So let's do that next. All right.
+1:22:00 The syntactic sugar is as follows.
+1:22:07 First off um Prolog has um binary operators and unary operators.
+1:22:13 And it has a lot of them. Right. So you can write something like this in Prolog.
+1:22:21 If you like. And it works. And it's a perfectly valid term.
+1:22:25 And Prolog interprets that in kind of the obvious way.
+1:22:30 If you're trying to write it, uh, you know, as a structure.
+1:22:34 So this is syntactic sugar for the following plus of three times, uh, four five.
+1:22:43 Right. These that's two different syntaxes for exactly the same term.
+1:22:49 You can write it either way if you like. Of course, most people like to write it in the first way, but they're entirely equivalent.
+1:22:56 And what that means is, at the top level, if you write three plus four times five,
+1:23:01 Prolog will treat it as a call to the predicate plus, and it will look for answers to that predicate.
+1:23:07 And it will say pretty quickly there is no predicate called.
+1:23:11 Plus you'll get an error message, right? That's not a top level term.
+1:23:16 That's very useful. You want your top level terms to appeal to predicates that are defined in the system.
+1:23:22 And there is no predicate plus slash two. All right.
+1:23:28 Uh, let's see a couple of others.
+1:23:32 Um, we have unary symbols as well. Right. So we could change this.
+1:23:36 Uh, two times minus three is equivalent to times of two and minus of three.
+1:23:46 Right. That's fine. Uh, but there's some other operators in Prolog that may be a little less obvious.
+1:23:54 All right. One of them, uh, is this one, uh uh, minus the if symbol is just a unary operator.
+1:24:08 So it's entirely equivalent to writing this.
+1:24:14 Right. I mean, the same thing. Also at the top level, comma, is an operator, right?
+1:24:21 This means if, uh, this means and a comma B is entirely equivalent to writing this, which is a little bit confusing at first.
+1:24:34 Right? But that's because this is a top level comma. This is an interior comma, which just means it's the arguments in a structure,
+1:24:41 whereas this is an operator that, you know, gets passed in the obvious way.
+1:24:48 There's also in Prolog a built in symbol called or which is written this way.
+1:24:55 And that's of course equivalent to something like this. And these operators nest just like these two.
+1:25:04 There's a whole set of operator precedence which you can look up by looking in the manual for up slash three,
+1:25:13 which tells you how to define operators and all that sort of thing.
+1:25:15 There's like two dozen built in ones, and I've given you some, but not the others and so forth and so on.
+1:25:21 But the important thing about all these operators is they're just syntactic sugar for structures.
+1:25:27 All they let you do is build up data structures in a more convenient way than sort of spelling it out like this.
+1:25:34 Yes, you can still have like a fun in the US context free grammar of the prolog because of this,
+1:25:41 like the two different ways of like interpreting a call. Oh yes.
+1:25:45 Because, uh, with a context free grammar,
+1:25:48 you can have one set of productions for the top level that refer to a different set of productions for lower levels.
+1:25:53 Oh, yeah. All right. Okay. Other questions about the operators?
+1:26:00 Yes. Everything. The arity B2N is the arity.
+1:26:07 Yeah, I'm the owner of this. Well, yeah.
+1:26:11 The three of these operators are all too correct.
+1:26:14 These are all arity two operators except for a unary minus.
+1:26:18 Minus can be either arity. There's a minus one, which I'm using here.
+1:26:25 But you can also, you know, you can do this if you like. There's has to be a space there.
+1:26:31 And then this is minus two n minus one. And it figures it out.
+1:26:35 And you know the OP predicate lets you sort of see how that works.
+1:26:41 Okay. There's another set of syntax which I've already used.
+1:26:45 That's part of the syntactic sugar which is the syntax for lists.
+1:26:50 So if you write open per open bracket close bracket, that's entirely equivalent to writing this atom.
+1:26:58 That's an atom, right. Because it's in single quotes.
+1:27:01 You can have spaces here, but here no spaces are allowed because there's only one atom for the empty list.
+1:27:07 And there it is. And if you write a list with some stuff in it.
+1:27:16 That's entirely equivalent to this. Uh, we'll get there.
+1:27:32 All right, so a list is syntactic sugar for, you know, basically a bunch of con cells strung together.
+1:27:41 If I were to draw a picture of those, it would look like this.
+1:27:56 Where? That's my symbol for the empty list. Right. And so this list is this value here.
+1:28:01 Right. So lists are built out of ./2.
+1:28:07 You can write it either way. But I can tell you almost everybody prefers it this way.
+1:28:12 And we already use this syntax if you'll recall.
+1:28:17 Vertical bar is equivalent to dot of x dot of y l.
+1:28:26 Right. Uh which is equivalent to the diagram I already showed you.
+1:28:35 Right. It's a list of length. At least two L is the tail of the list, X is the first item, Y is the second.
+1:28:42 And that's this data structure as well. Okay.
+1:28:47 So you use structures to build trees.
+1:28:52 But if there are long skinny trees that sort of point off to the right, you can.
+1:28:55 And if they're built with dots then you can think of them as lists. It's the same thing either way.
+1:29:02 All right. There's a bit more syntactic sugar than this, but this is enough to sort of get us started.
+1:29:09 Now, I keep emphasizing that these are structures.
+1:29:14 And so what's happened here is I've talked about Prolog for nearly an hour and a half, and I haven't shown you how to add two and two.
+1:29:24 Right. We've talked about lists and all this other stuff.
+1:29:28 We've done permutations, but we haven't done basic arithmetic, which is the first thing you learn in almost any programing language.
+1:29:35 So I'll do a little bit of a side here on arithmetic with the proviso, by the way, that I don't think you need to do this for your homework.
+1:29:43 Right. Your homework doesn't involve arithmetic, if I'm not mistaken. But if you ever needed.
+1:29:54 There is an infix operator called is that will let you do arithmetic.
+1:30:01 And the way you would call it is something like this n equals 19 that add to that.
+1:30:08 And then later on you say, oh well I would like to compute this number uh times 12 or something.
+1:30:13 Right. You say m is n times.
+1:30:18 Well and then keep going. All right.
+1:30:22 So what's going on here internally is this builds a data structure that looks like this right.
+1:30:30 Star of 19 and 12. And we know that N is 19 because we've already bound it.
+1:30:36 And we've we've been succeeding all these and say we're succeeding or succeeding.
+1:30:40 Right. So this call to is builds this data structure passes it to is is is written in machine code.
+1:30:48 It's not written in Prolog.
+1:30:49 And what it does is it looks at this data structure and does the tree walk and does the right computation and figures out 19 times 12, which is.
+1:30:59 To 28. All right.
+1:31:03 And then it binds m 2 to 28. This is the same as saying m equals 228.
+1:31:08 All right. But there's a catch right.
+1:31:12 And the catch is as follows. Suppose the computation doesn't look like that.
+1:31:17 Suppose instead it looks like this. That is first we call is.
+1:31:24 And second we say oh we want n to be 19. And that case the data structure that's passed to the machine code looks like this.
+1:31:32 Right. Or I'll just write it as a capital N.
+1:31:36 It's a logical variable. We don't know its value. And when that happens the machine code says oh I don't know what to do.
+1:31:43 It prints out an error message. Right. And your computation fails or something.
+1:31:47 Right? Right. So this is an exception to all the other predicates we've talked about in Prolog.
+1:31:54 And that it's not good enough. Right?
+1:31:58 It doesn't sort of let you run it backwards like you can with append and to some extent even with Perl,
+1:32:06 because it's written in machine code, and the machine code is written in C and C can't do this sort of thing.
+1:32:11 Right. Another way of putting it, the technical term for what we want here is we want a ground term.
+1:32:21 All right. A ground term is a term that has no logical variables anywhere in it.
+1:32:28 It could be an enormous term with lots of structures and atoms and numbers in it, but it can't have any logical variables.
+1:32:35 And the restriction that is has is that the second argument has to be a ground term because of the way it's constructed in machine code.
+1:32:46 And you'll probably see when you write a bit of Prolog code and that sort of thing, that when you write your code implicitly,
+1:32:53 you will assume some of my arguments had better be ground terms, or else this code is going to be really inefficient.
+1:32:58 And that's sort of par for the course.
+1:33:01 But that's why we, you know, this notion of ground term is important not simply for correctness, which it is here, but also for efficiency.
+1:33:11 Okay. Any questions on how to add two and two.
+1:33:14 Now we know how to do it. And is two plus two right. We're off to the races.
+1:33:21 All right, well, um, what I'd like to now go is, is talk about we've talked about the syntax,
+1:33:27 but I want to talk about, in some sense, Prolog programs write Prolog programs.
+1:33:35 We'll get there. And you can think of Prolog programs as being collections of clauses.
+1:33:50 Right. Each clause is a term. But there are multiple kinds of clauses depending on, uh, what that term looks like and how you use it.
+1:34:05 All right. There are three major forms of clauses, right.
+1:34:10 Uh, the first are facts. Right.
+1:34:14 So the three clause types. Facts are things like this append.
+1:34:25 Uh, um. I'm sorry. We'll get there.
+1:34:32 Right. That is there. Cause they end in a period, but they don't have a colon dash anywhere in them, right?
+1:34:40 They're just a single term, right.
+1:34:44 And they're called facts because they're unconditional.
+1:34:48 They're true no matter what. The Prolog interpreter, when it sees a fact, it's happy because that lets it easily prove something.
+1:34:57 It can just appeal to a fact done right. Facts could be even simpler than this, right?
+1:35:03 Here's one that's even simpler. Term of empty list.
+1:35:09 Empty list. Right? In some sense, this is even simpler.
+1:35:13 It doesn't have any logical variables in it. It's a very precisely, in fact, at Perm and all that sort of thing.
+1:35:20 But as you can see, you can put logical variables and thus have your fact be more general than here.
+1:35:27 Or you can have, you know, a fact that looks like this singleton.
+1:35:36 List of those, right?
+1:35:40 Here is a fact about singleton list. It's true for any list, uh, that has just one element in it, and we don't even care what that element is.
+1:35:48 We'll never see it again. So those are facts. The second kind of clauses are rules.
+1:35:57 Rules always have a turnstile ID at the top level,
+1:36:01 and they're trickier and more complicated because basically they tell the Prolog interpreter, here's how to prove something.
+1:36:10 But there is a condition. You can only prove this thing if all these other things are true.
+1:36:18 So for the Prolog interpreter, a rule entails more work than in fact, because once you have rules, you started off with a goal.
+1:36:28 Now you're going to have subgoals, right? So a rule might look like this append of, you know, x cons l m x cons l m.
+1:36:43 In some sense, you know, the rule starts off looking like a fact.
+1:36:47 But then there's the dreaded turnstile, which means there's more work to do.
+1:37:01 Now, when we talk about a predicate, what we mean is a collection.
+1:37:08 Well, I should say a list, an ordered lists of facts and rules.
+1:37:13 They all have the same name at the start, right?
+1:37:18 And that name all has the same arity, right?
+1:37:23 And for convenience, we often like to talk about the head of a clause.
+1:37:30 Facts have a head. That's the entire clause.
+1:37:34 The head of a rule, though, is everything up to the turnstile? Right.
+1:37:37 So here are the heads of the facts and rules that we've written down so far.
+1:37:44 Right? In some sense, we wouldn't need to have these two kinds of closets.
+1:37:51 We could just have one, because what I could do is I could right this.
+1:38:01 Right. True is a built in predicate with arity zero, I guess you could call it.
+1:38:06 And it's always true. It always succeeds, right? So I suppose we could say we have no facts.
+1:38:11 We have only rules. Except this is such a common case that we decide.
+1:38:16 Oh, uh, we'll just have a fact by that name.
+1:38:21 All right. The third kind of clause is, um, what we could call a goal or a query.
+1:38:30 I'll call it queries. The syntax for a query looks like this.
+1:38:38 And then over here you put whatever goal you like.
+1:38:41 Right. So we can say append of 3 or 4 y or something like that.
+1:38:50 Right. Goals, unlike facts and rules, don't really have heads.
+1:38:59 They only have bodies, right? So if we call this part the body.
+1:39:05 Facts don't have a body. They just have heads. Rules have a body, right?
+1:39:11 And goals have just bodies and no heads.
+1:39:18 And the body of a rule or the body of a goal basically tells the Prolog interpreter, hey, here's what I want you to do next, right at the top level.
+1:39:30 The Prolog interpreter operates by taking the goal that you specify,
+1:39:36 matching it to all the facts in the rules in the system in order looking at their heads if it finds a match,
+1:39:43 if it's the fact it says, okay, I'm done, I proved it. If it finds a rule that says, oh, I've got some subgoals and it recurse.
+1:39:51 So one way to think about it is Prolog uses sort of, uh, backwards chaining.
+1:40:03 From goal. That is, it computes.
+1:40:09 It's always totally goal oriented. If you give Prolog a whole bunch of facts and rules, it'll say yep yep yep yep yep yep I believe you.
+1:40:19 Yep I believe and won't do anything. The facts and rules are just stuffed into its database with no further thought.
+1:40:27 The only time the Prolog interpreter springs into action is if you give it a query which has a goal at the top level and says,
+1:40:34 oh well, now I got to start thinking right?
+1:40:38 And it in effect chains backwards from the goal that you give it backwards into facts that will prove it using rules as indirect parts of that chain.
+1:40:50 Okay. When it does this, it does this sort of left to right.
+1:40:59 Across the database. And by database I mean of, you know, all the facts and rules in the system.
+1:41:14 You tell it facts and rules in an order.
+1:41:16 And when it does tries to match a goal against all those facts and rules, it does it in exactly the order that you specified.
+1:41:23 So that's part of the control you have over a Prolog system.
+1:41:28 But there's something else that it's doing, which is maybe a little less obvious.
+1:41:33 It does this in a depth first search. For all possible solutions.
+1:41:47 And what do I mean by that? At the top level, you specified a goal of some sort, right.
+1:41:55 And what the Prolog interpreter does is it looks for all facts and rules in the system whose heads match the goal.
+1:42:02 Let's say there's four of them. There's four possibilities.
+1:42:07 It tries the first one. First. Let's say this one has three subgoals that are all possibilities.
+1:42:14 It tries these in order and that sort of thing.
+1:42:17 So it's searching through what could potentially be a pretty large tree, but it's always searching in this direction.
+1:42:25 First. If all of these subgoals fail, then it backtracks and it keeps exploring the tree left to right, but it's very much depth first.
+1:42:39 All right. So with that in mind, let's I'm going to write some really simple predicates.
+1:42:45 And we'll see how well they work in this environment. And some of these predicates are built in you know.
+1:42:51 But I'll give you the source code for them. First off, here's the source code for the built in predicate.
+1:42:56 True that I mentioned. It's a fact.
+1:43:05 True. It's true. Can't argue with that, right?
+1:43:10 Okay. There is another built in predicate. Kind of the opposite of true in some sense called fail.
+1:43:18 Whenever you call fail, the Prolog system immediately fails, right?
+1:43:23 It backtracks. So, for example, if you like, you can do something that looks like this.
+1:43:29 Append. XY347.
+1:43:39 Right x and l fail.
+1:43:46 Period. Right. What this does is it calls append.
+1:43:50 And then it writes out the first item in the list, writes out a new line.
+1:43:55 Fail backtracks into new line. New line says I only know one way to print.
+1:43:58 It backtracks. This guy backtracks. We backtrack into append and we get another answer.
+1:44:03 So this will output empty list 334347.
+1:44:14 And then it'll say no, right? Because fail is logically equivalent to false.
+1:44:21 This this query cannot possibly succeed.
+1:44:25 It's like saying false. False can never succeed. You're going to get the answer no.
+1:44:29 But we threw in some side effects on the way to sort of see the answers.
+1:44:34 And this is you know, I tend to do this a lot. And so instead of typing, you know, semicolon a lot, I'll just have the system do it for me.
+1:44:41 Right. So what I'd like to do now is show you the source code for fail.
+1:44:47 And I'll put it in this box here. There it is.
+1:44:53 Right. Because what is the Prolog interpreter do you say please?
+1:44:58 Proof fail looks through the whole database trying to find a factor rule that mentions fail.
+1:45:03 There aren't any. So it fails. Now there's a little bit of a catch here a software engineering catch.
+1:45:14 Suppose I have a typo and I spell it with an E at the end.
+1:45:23 Logically that's equivalent. You look through the whole database.
+1:45:26 There's no predicate called fail e, so that should behave exactly the same way.
+1:45:31 Except the problem now is if I misspell a predicate, Prolog is just going to fail silently.
+1:45:37 That's not very interesting. So most Prolog interpreters, including Prolog, have the following little extra.
+1:45:44 If you call a predicate that has no clauses and it's not spelled FCL,
+1:45:50 it prints out a little warning or an error message saying you're you sure you know what you're doing?
+1:45:54 So by convention, fail, which is built in, is the only predicate with no clauses where you don't get the warning.
+1:46:03 It assumes, oh, you really meant to be false, right? All right.
+1:46:11 Let's try another one. You can probably tell what this one's going to do, right?
+1:46:21 This is like having a function call.
+1:46:24 In a in a conventional language in which the body, the implementation of the function just turns around and calls the function.
+1:46:31 Right. If you want to try a loop, the Prolog interpreter will say, oh, as a subgoal I have to prove loop.
+1:46:37 Oh, how do I do that? Oh here's something. Oh, I have to prove loop.
+1:46:41 It'll just go into an infinite loop. Trying to prove loop okay.
+1:46:45 It won't succeed. Logically, this clause doesn't tell you anything.
+1:46:54 No. It says, you know, basically X is true if X is true.
+1:46:57 You already knew that, right? So logically, this is not something that you'd ever want to write.
+1:47:03 And I hope you never write a Prolog program like this. But that's what's going to happen in a Prolog interpreter, right?
+1:47:10 But I'm going to give you a variant of this one that actually might have a use.
+1:47:19 This predicate is called repeat and it's built into Prolog.
+1:47:23 But I'll give you the source code. Repeat is true, and also repeat is true if repeat is true.
+1:47:34 Logically, this predicate is equivalent to that, right?
+1:47:38 Because this says repeat is true. Okay. It's done. We know it's true.
+1:47:41 This tells us no extra information about repeat, but procedurally this behaves different.
+1:47:49 True is a predicate when you call it immediately see succeeds and you keep going.
+1:47:54 Repeat as a predicate that if you call it, it immediately succeeds and you keep going.
+1:47:59 But if you backtrack and repeat, it succeeds again, right?
+1:48:04 So you can do something that looks like this. Here's my goal.
+1:48:09 Repeat. No fail.
+1:48:15 What's going to happen? Repeat will succeed. Will output a new line.
+1:48:19 Fail will backtrack. Don't say I can't do anything. Will backtrack into repeat.
+1:48:22 Repeat will succeed again. We'll call an elegant. So we'll output an infinite number of new lines.
+1:48:28 Normally you want to do something a little bit more useful than that, but that's the function of repeat.
+1:48:33 That's what repeat wants to do. Right now, suppose we have a different kind of repeat.
+1:48:45 I'll just call it rep for short and it works this way.
+1:48:53 Notice, rep and repeat are logically equivalent.
+1:48:58 But rep is useless. You would never want to use that code because whenever you call it, it goes into an infinite loop, right?
+1:49:06 One way of thinking about it here is that what rep sets up is a tree, right?
+1:49:14 And the tree looks like this. Each one of these is a success, right?
+1:49:23 That's this guy here.
+1:49:26 But since Prolog operates depth first, it never finds any of the successful branches that keep searching depth first and never gets to an answer.
+1:49:36 So this is another aspect of Prolog is control.
+1:49:39 When you're writing Prolog clauses, you will be writing stuff that's more complicated than this, of course,
+1:49:44 but you have to think about the proof tree that you're generating and make sure you
+1:49:50 don't write proof trees that look like this because you're going to get into trouble.
+1:49:57 All right. Any questions about these?
