@@ -28,6 +28,22 @@ Optional: `--model gpt-4o-mini` (default) or `gpt-4o`.
 - **Network:** required for `pip install` and for the script (OpenAI API calls).
 - **Filesystem:** read input file, write `segments.json` and `output.md` (and `.venv` if you create it in-project).
 
+## API + frontend
+
+Run the FastAPI backend (from repo root):
+
+```bash
+uvicorn api:app --reload
+```
+
+Run the Next.js frontend:
+
+```bash
+cd frontend && npm install && npm run dev
+```
+
+Set `NEXT_PUBLIC_API_URL` in `frontend/.env.local` if the API is not at `http://localhost:8000`. Paste a transcript, click Convert, and copy sections from the rendered notes.
+
 ## Validate Stage 1 only (no API)
 
 ```bash

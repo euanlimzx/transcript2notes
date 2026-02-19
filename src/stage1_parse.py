@@ -39,6 +39,28 @@ def seconds_to_timestamp(seconds: int) -> str:
     return f"{m}:{s:02d}"
 
 
+def _parse_raw_lines(raw_lines: list[str]) -> list[ParsedLine]:
+    """
+    Parse a list of raw transcript lines into ParsedLine list.
+    If a line starts with M:SS or H:MM:SS followed by space, that timestamp is stored; otherwise
+    the whole line is kept as text with seconds=None. Blank lines are skipped.
+    """
+    lines: list[ParsedLine] = []
+    for raw in raw_lines:
+        raw = raw.strip()
+        if not raw:
+            continue
+        first_space = raw.find(" ")
+        if first_space > 0:
+            ts_str, rest = raw[:first_space], raw[first_space + 1 :].strip()
+            sec = timestamp_to_seconds(ts_str)
+            if sec is not None:
+                lines.append(ParsedLine(text=rest, seconds=sec))
+                continue
+        lines.append(ParsedLine(text=raw, seconds=None))
+    return lines
+
+
 def parse_transcript(path: Path | str) -> list[ParsedLine]:
     """
     Parse transcript file into ordered list of ParsedLine.
@@ -47,22 +69,16 @@ def parse_transcript(path: Path | str) -> list[ParsedLine]:
     Blank lines are skipped.
     """
     path = Path(path)
-    lines: list[ParsedLine] = []
     with path.open(encoding="utf-8") as f:
-        for raw in f:
-            raw = raw.strip()
-            if not raw:
-                continue
-            first_space = raw.find(" ")
-            if first_space > 0:
-                ts_str, rest = raw[:first_space], raw[first_space + 1 :].strip()
-                sec = timestamp_to_seconds(ts_str)
-                if sec is not None:
-                    lines.append(ParsedLine(text=rest, seconds=sec))
-                    continue
-            # No valid leading timestamp: treat entire line as text
-            lines.append(ParsedLine(text=raw, seconds=None))
-    return lines
+        return _parse_raw_lines(f.readlines())
+
+
+def parse_transcript_from_string(content: str) -> list[ParsedLine]:
+    """
+    Parse transcript content (string) into ordered list of ParsedLine.
+    Same format as parse_transcript: leading M:SS or H:MM:SS per line, blank lines skipped.
+    """
+    return _parse_raw_lines(content.splitlines())
 
 
 def slice_for_llm(lines: list[ParsedLine]) -> list[list[ParsedLine]]:
@@ -121,9 +137,19 @@ def slice_for_llm(lines: list[ParsedLine]) -> list[list[ParsedLine]]:
 
 def run_stage1(path: Path | str) -> tuple[list[ParsedLine], list[list[ParsedLine]]]:
     """
-    Run Stage 1: parse transcript and produce (full lines, slices for LLM).
+    Run Stage 1: parse transcript file and produce (full lines, slices for LLM).
     Slices are either [full_lines] or overlapping windows when over character limit.
     """
     lines = parse_transcript(path)
+    slices = slice_for_llm(lines)
+    return lines, slices
+
+
+def run_stage1_from_content(content: str) -> tuple[list[ParsedLine], list[list[ParsedLine]]]:
+    """
+    Run Stage 1 from transcript string: parse and produce (full lines, slices for LLM).
+    Use this when transcript is in memory (e.g. API request body); no filesystem access.
+    """
+    lines = parse_transcript_from_string(content)
     slices = slice_for_llm(lines)
     return lines, slices

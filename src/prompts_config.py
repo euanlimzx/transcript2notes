@@ -51,7 +51,9 @@ Output ONLY the line numbers (integers), one per line, in ascending order. No ot
 
 TRANSCRIPT_TO_NOTES = """You are given a raw lecture transcript segment (speech-to-text style). Your task is to turn it into comprehensive study notes.
 
-Main job: Produce organized, cohesive study notes that capture and clarify what the professor teaches. You may flesh out examples and explain concepts in a clear, teaching-oriented way — the goal is notes that help someone study, not a verbatim summary. Use headings, lists, and code blocks as appropriate.
+Main job: Produce organized, cohesive study notes that capture and clarify what the professor teaches. You may flesh out examples and explain concepts in a clear, teaching-oriented way — the goal is notes that help someone study, not a verbatim summary.
+
+Structure (important): Use only two levels of text hierarchy. (1) Section titles are added for you — do not output your own ## or ### sub-headings. (2) Within the section, use only: **bold** for key terms and concept names, regular paragraphs, bullet or numbered lists, and code blocks where appropriate. Do not use markdown headings (no #, ##, ###) inside your output — rely on bold, lists, and paragraphs for organization.
 
 The transcript is speech-to-text and may be inaccurate (mishears, typos, garbled phrases). Your job is to produce accurate, reliable study notes. Correct or clarify when the intended meaning is clear; if something is unintelligible, omit it or mark it as unclear rather than copying it into the notes. Ensure any definitions, code, or categorizations you include are consistent and correct—for example, examples should fit the categories you list them under.
 

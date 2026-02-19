@@ -2,8 +2,7 @@
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from openai import OpenAI
-
+from .llm_client import complete
 from .models import Segment
 from . import prompts_config
 
@@ -13,19 +12,17 @@ MAX_CONCURRENT_REQUESTS = 5
 
 
 def _call_llm_for_segment(
-    client: OpenAI,
     segment_text: str,
     model: str,
+    api_key: str | None,
 ) -> str:
     """Single LLM call for one segment. Returns raw markdown notes."""
-    resp = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": prompts_config.TRANSCRIPT_TO_NOTES},
-            {"role": "user", "content": segment_text},
-        ],
+    return complete(
+        prompts_config.TRANSCRIPT_TO_NOTES,
+        segment_text,
+        model,
+        api_key=api_key,
     )
-    return (resp.choices[0].message.content or "").strip()
 
 
 def _section_heading(segment: Segment, index: int) -> str:
@@ -38,7 +35,7 @@ def _section_heading(segment: Segment, index: int) -> str:
 
 def run_stage3(
     segments: list[Segment],
-    model: str = "gpt-4o-mini",
+    model: str = "gemini-3-flash-preview",
     api_key: str | None = None,
 ) -> str:
     """
@@ -49,7 +46,6 @@ def run_stage3(
     if not segments:
         return ""
 
-    client = OpenAI(api_key=api_key)
     workers = min(MAX_CONCURRENT_REQUESTS, len(segments))
     results: list[tuple[int, str]] = []
 
@@ -57,9 +53,9 @@ def run_stage3(
         futures = {
             executor.submit(
                 _call_llm_for_segment,
-                client,
                 seg.text,
                 model,
+                api_key,
             ): i
             for i, seg in enumerate(segments)
         }

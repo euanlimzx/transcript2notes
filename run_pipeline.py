@@ -47,8 +47,8 @@ def main() -> None:
     )
     parser.add_argument(
         "--model",
-        default="gpt-4o-mini",
-        help="OpenAI model for boundary detection and topic extraction (default: gpt-4o-mini)",
+        default="gemini-3-flash-preview",
+        help="Gemini model (default: gemini-3-flash-preview). Use gemini-3-pro-preview for higher quality, slower.",
     )
     parser.add_argument(
         "--no-topics",
@@ -70,9 +70,38 @@ def main() -> None:
         action="store_true",
         help="Skip Stage 3; do not generate or write output.md",
     )
+    parser.add_argument(
+        "--notes-only",
+        action="store_true",
+        help="Skip Stage 1, topic extraction, and Stage 2; load segments from -o/--output JSON and run only Stage 3 (notes).",
+    )
     args = parser.parse_args()
     input_path = Path(args.input)
     output_path = Path(args.output)
+
+    if args.notes_only:
+        if not output_path.is_file():
+            logger.error("Segments file not found: %s (required for --notes-only)", output_path)
+            raise SystemExit(1)
+        logger.info("Notes-only mode: loading segments from %s", output_path)
+        raw = json.loads(output_path.read_text(encoding="utf-8"))
+        segments = [
+            Segment(
+                text=d["text"],
+                start_sec=d.get("start_sec"),
+                end_sec=d.get("end_sec"),
+                start_ts=d.get("start_ts", ""),
+                end_ts=d.get("end_ts", ""),
+            )
+            for d in raw
+        ]
+        logger.info("Loaded %d segments", len(segments))
+        notes_path = Path(args.notes_output)
+        logger.info("Stage 3: notes generation (model=%s)", args.model)
+        markdown = run_stage3(segments, model=args.model)
+        notes_path.write_text(markdown, encoding="utf-8")
+        logger.info("Wrote %s", notes_path)
+        return
 
     if not input_path.is_file():
         logger.error("Input file not found: %s", input_path)

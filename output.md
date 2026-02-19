@@ -1,677 +1,253 @@
-## Section 1 (0:15 – 5:57)
+## Section 1 (0:15 – 9:24)
 
-# Study Notes on Logic Programming
+**Introduction to Logic Programming**
 
-## Overview of Programming Paradigms
-- **Functional Programming**: Focuses on the evaluation of functions and avoids changing state and mutable data. Languages include OCaml, Haskell.
-  - **Characteristics**:
-    - Functions as primary building blocks.
-    - No assignment statements (No side effects).
-    - Emphasizes immutability.
-- **Imperative Programming**: Focuses on sequences of statements that change program state. Languages include C, C++, Java, JavaScript.
-  - **Characteristics**:
-    - Utilizes variables and assignment.
-    - Execution involves sequencing (one statement after another).
-    - More control over state and flow.
+Logic programming represents the third major programming paradigm, alongside functional and imperative programming. While functional programming (e.g., **OCaml**) focuses on functions and the absence of side effects, and imperative programming (e.g., **C**, **C++**, **Java**) focuses on statements and sequencing, logic programming is centered on **predicates** and **logical connectives**. **Prolog** is the primary language used in this paradigm.
 
-## Introduction to Logic Programming
-- **Main Language**: Prolog (most widely used logic programming language).
-- **Characteristics of Logic Programming**:
-  - Emphasizes **declarative programming**.
-    - Instead of detailing *how* to achieve a task, you *declare what* you want to achieve.
-  - Utilizes **predicates**: 
-    - Predicates can be understood as functions that only return boolean values (true/false).
-    - Instead of function calls, you perform **queries**.
-  
-### Programming Differences
-- **In Logic Programming**:
-  - **No Assignment Statements**: Variables do not change values.
-  - **No Functions**: You do not define or call functions in the traditional sense.
-  - **No Sequencing**: The flow of control is handled implicitly based on logical propositions.
+**Key Characteristics of Logic Programming**
 
-### Logical Connectives
-- Logic programming relies on logical connectives to combine predicates:
-  - **AND** (Conjunction)
-  - **OR** (Disjunction)
-  - **NOT** (Negation)
-  - **IMPLIES** (Implication)
+In logic programming, the developer works with a restricted set of tools compared to other paradigms, which changes the focus of the programming task.
+*   **Predicates**: Instead of traditional functions, logic programming uses predicates. These can be conceptualized as functions that only return Boolean values.
+*   **Logical Connectives**: Predicates are joined together using connectives such as **and**, **or**, **not**, and **implies**.
+*   **Queries**: There are no traditional function calls. Instead, the user provides a **query** (a question), and the system attempts to find an answer that satisfies the defined logic.
+*   **Absence of Traditional Features**: Logic programming lacks assignment statements, side effects, and explicit sequencing. You do not tell the computer to do "step A then step B"; instead, you define relationships.
 
-## Advantages of Logic Programming
-- **Declarative Nature**: Allows the programmer to focus on the desired outcome rather than the implementation details.
-- **Automatic Backtracking**: Prolog can infer and backtrack to find solutions based on the statements and queries you provide.
+**Declarative Programming**
 
-## Conclusion
-While it may seem challenging to program without traditional constructs like loops, assignment, or functions, logic programming allows for powerful, high-level reasoning about problems. The key takeaway is the shift from an imperative approach to a declarative mindset, which can lead to clean, efficient solutions that leverage the capabilities of the Prolog interpreter.
+The fundamental goal of logic programming is to emphasize **declarative programming**. This approach shifts the focus from *how* to solve a problem to *what* the problem is.
+*   **Declarative vs. Imperative**: In imperative programming, the developer writes detailed implementation instructions (like **while loops** and **for loops**). In declarative programming, the developer declares the desired result, and the **Prolog interpreter** determines how to achieve it.
+*   **Separation of Concerns**: This is similar to how **HTML** attempts to separate content from appearance. In Prolog, the goal is to separate the logic of the problem from the mechanics of the execution.
 
-## Section 2 (5:57 – 10:00)
+**The Algorithm Equation: Logic and Control**
 
-# Study Notes on Declarative Programming and Prolog
+A logic program can be viewed as the sum of two distinct parts: **Logic** and **Control**. This separation is a discipline intended to simplify software engineering.
 
-## Overview of Declarative Programming
-- **Definition:** Declarative programming allows developers to specify what they want to achieve without having to detail how to get there. The system interprets and executes the necessary instructions.
-  
-- **Key Concept:** Declarative programming separates the "what" from the "how."
-  - **Example in Web Development:** 
-    - HTML provides a declarative way to structure web content; it defines the content (what) separately from styling (how it looks).
+**Logic**
+The logic is the formal specification of what the program should output. It defines the rules and constraints of the problem. The correctness of the program depends entirely on the logic; if the logic is correct, the answers provided by the system will be correct.
 
-## Prolog and Logic Control
-- **Prolog Basics:**
-  - Prolog is a logic programming language that reflects declarative principles. However, it has limitations and does not function like a magic solution.
-  - Each program can be divided into:
-    - **Logic:** The definition of what the output should be, represented formally.
-      - Determines correctness—if the logic is correct, the answers produced will also be correct.
-    - **Control:** Guidance for the interpreter to execute the logic more efficiently.
-      - Affects performance but does not alter the correctness of the program.
+**Control**
+Control refers to the advice provided to the interpreter to improve performance. Ideally, control information should not change the logical correctness of the program or the set of valid answers. Instead, it helps the interpreter find those answers more efficiently. 
 
-## Importance of Separating Logic and Control
-- **Software Engineering Principle:**
-  - When faced with a complex problem, break it into simpler, independent sub-problems to manage complexity.
-    - Errors in control may slow down the program but keep logic intact (correct answers).
-    - Errors in logic lead to incorrect answers, emphasizing the importance of effective logic design.
+By separating these two, a developer can focus on the correctness of the program (the logic) independently of the efficiency of the program (the control). If the control is poorly implemented, the program may be slow, but it will still produce the right answer. If the logic is poorly implemented, the program will produce the wrong answer.
 
-## Practical Application
-- **Prolog Implementation:**
-  - The next phase involves using Prolog to implement a low-level sorting algorithm.
-  - **Common Algorithms Studied:**
-    - Quicksort
-    - Heapsort
-    - Bubblesort
-  - **Rationale:** Understanding these algorithms in Prolog will help illustrate how they work at a basic level, even though in practice, developers often rely on built-in sorting functionalities rather than writing them from scratch.
+## Section 2 (9:24 – 39:08)
 
-## Conclusion
-- The approach of separating logic and control in programming using Prolog reflects the larger goal of improving efficiency while maintaining correctness.
-- Future examples and implementations will focus on sorting, establishing a practical understanding of these concepts within Prolog.
+**Introduction to Logic Programming and Sorting**
 
-## Section 3 (10:00 – 19:12)
+In traditional computer science courses, sorting is taught through low-level algorithms like **quicksort**, **heapsort**, or **bubble sort**. These focus on the "how"—the specific steps the machine must take to rearrange data. In **Prolog**, the focus shifts to the "what"—the logical definition of what it means for a list to be sorted. This is known as **logic programming**.
 
-# Prolog Sorting Predicate Study Notes
+While Prolog includes a built-in `sort` predicate for practical use, writing a custom sort routine from scratch helps illustrate how to think in logic. We define a **predicate** rather than a function. In functional languages like Java or OCaml, a function takes $n$ arguments and returns a value. In Prolog, we use an $n+1$ argument predicate, where the final argument represents the "return value."
 
-## Overview
-- The main focus is on constructing logical programs in Prolog, particularly sorting lists.
-- Understanding predicates in Prolog is essential as they differ from functions in traditional programming languages.
-- The goal is to introduce a sorting predicate that captures the essence of sorting logically.
+For example, `sort(L, S)` is a predicate that is true if `S` is the sorted version of list `L`.
+*   **Unification**: If we provide both arguments, such as `sort([3, 5, -2], [-2, 3, 5])`, Prolog returns `yes` (true).
+*   **Querying**: If we provide a list and a variable, such as `sort([3, 5, -2], X)`, Prolog will search for a substitution for `X` that makes the statement true, returning `X = [-2, 3, 5]`.
 
-## Key Concepts
+In Prolog syntax, **variables** start with capital letters (e.g., `X`, `L`, `S`), while **predicate names** and constants start with lowercase letters.
 
-### Predicates vs Functions
-- In Prolog, you define predicates instead of functions.
-- A predicate serves as a logical statement that can be true or false based on the provided arguments.
-- For instance, the sorting predicate we discuss can be conceptualized as `sort(L, S)` where:
-  - `L` is an input list.
-  - `S` is the sorted version of `L`.
+**Defining the Logic of Sort**
 
-### Predicate Signature
-- The predicate is defined such that `sort(L, S)` is true if:
-  1. `L` is a list.
-  2. `S` is a permutation of `L` that is sorted.
+To define sorting logically, we must specify the requirements that make one list the sorted version of another. A list `S` is the sorted version of `L` if:
+1.  `S` is a **permutation** of `L` (they contain the exact same elements with the same frequencies).
+2.  `S` is **sorted** (its elements are in non-decreasing order).
 
-### Writing Logical Specifications
-1. **List Length**: Both lists `L` and `S` must have the same number of elements.
-2. **Element Frequency**: Both lists must contain the same elements, including duplicates, which implies they are permutations of each other.
-3. **Ordering Condition**: The elements of list `S` must be arranged in non-decreasing order.
-
-#### Permutations
-- A formal definition of permutations states that `L` and `S` must have identical elements with the same frequency.
-- Note: If two lists are permutations, they must also be of equal length.
-
-### Logical Representation
-The sorting requirement can be represented logically in Prolog:
-```prolog
-sort(L, S) :-
-    perm(L, S),
-    sorted(S).
-```
-- This means: For lists `L` and `S`, if `S` is a permutation of `L` and `S` is sorted, then `sort(L, S)` is true.
-
-### Logical Connectives in Prolog
-- In Prolog, the comma `,` represents a logical AND operation. This can cause confusion, so it's important to understand:
-  - Top-level commas indicate that both conditions must be satisfied.
-
-### Defining Permutations and Sorting
-- Before fully implementing the `sort` predicate, the definitions for:
-  - **Permutation (`perm`)**: A predicate that must effectively compare the frequency and presence of elements in two lists.
-  - **Sorted (`sorted`)**: A predicate that checks if the elements of a list are in non-decreasing order.
-  
-## Summary of Requirements
-1. `L` and `S` must be of equal length.
-2. `L` and `S` must have the same elements with the same frequency (permutations).
-3. `S` must be sorted in non-decreasing order.
-
-The lecture emphasizes the need to articulate these specifications clearly, as it assists the Prolog interpreter in producing correct results, especially when it comes to returning solutions or inferring values based on given queries.
-
-## Section 4 (19:12 – 22:30)
-
-# Study Notes on Lists and Sorting in Prolog and OCaml
-
-## Definitions
-- **Sorted List**: A list is considered sorted based on specific rules defined for its structure and contents.
-  
-### Base Cases for Sorted Lists
-1. **Empty List**:
-   - Representation: `[]`
-   - Rule: The empty list is inherently sorted.
-  
-2. **Singleton List**:
-   - Representation: `[X]` (in Prolog) or `X :: []` (in OCaml)
-   - Rule: Any list containing exactly one element is sorted.
-
-### Notational Insights
-- **Prolog Syntax**:
-  - A logical variable is represented by capital letters (e.g., `X`, `Y`).
-  - The notation `[]` signifies an empty list.
-  - For singleton lists, the expression `forall X, sorted([X])` indicates that a singleton list containing `X` is sorted.
-  - Prolog replaces variables that appear only once with an underscore (`_`), indicating a nameless variable. Each underscore represents a different variable.
-
-- **OCaml Syntax**:
-  - An empty list is similarly represented as `[]`, but singleton lists would be written as `X :: []`.
-  - The notation `::` is used to construct lists from a head and a tail, e.g., `X :: (Y :: L)`.
-  
-## Recursive Case for Sorted Lists
-- To determine if a list is sorted when it contains two or more elements:
-  - **Prolog Representation**:
-    - A pattern that matches a list with at least two elements: 
-      ```prolog
-      [X, Y | L]
-      ```
-    - Here, `X` is the first element, `Y` is the second element, and `L` is the remaining list.
-  
-  - **OCaml Representation**:
-    - Equivalent expression in OCaml:
-      ```ocaml
-      x :: y :: l
-      ```
-    - This translates to a list whose first element is `x`, the second is `y`, and `l` is the remaining list.
-
-### Additional Clarification
-- Lists can also be represented in other forms. For example, a list of length three can be:
-  - `X :: Y :: []` (noting `Y` as the second element and an empty tail).
-  - Or using placeholders: 
-  ```ocaml
-  [X; Y; Z]
-  ```
-- In conversational terms, it was noted that there may be different notations for representing lists, but the essential structure remains the same regardless of how it's written.
-
-### Conclusion
-Understanding these basics of sorted lists, as well as the syntax differences between Prolog and OCaml, provides a strong foundation for working with lists in functional programming languages.
-
-## Section 5 (22:30 – 34:04)
-
-# Study Notes on Prolog and Sorting/Permutations
-
-## Sorting a List in Prolog
-
-### Definition of Sorted List
-
-To determine if a list is sorted, we need to confirm two main conditions:
-
-1. **Comparison of Elements**: The first element `x` must be less than or equal to the second element `y` (i.e., `x ≤ y`).
-2. **Recursive Structure**: The rest of the list (tail) must also be sorted.
-
-### Prolog Syntax
-
-In Prolog, the less than or equal to operator is expressed in reverse (`=<=`). This is because early Prolog developers used arrows in natural language parsing, thus opting to represent the less than or equal to relationship differently to avoid confusion.
-
-### Common Logic Mistake
-
-A common pitfall when implementing the `sorted` predicate is oversimplifying the logic. An incorrect implementation might only check the first two elements of the list:
+In Prolog, the "and" operator is represented by a comma (`,`). The logical implication "if" is represented by `:-`. We can define the `sort` predicate as:
 
 ```prolog
-sorted([X, Y | L]) :- X =< Y, sorted(L).
+sort(L, S) :- perm(L, S), sorted(S).
 ```
 
-This would incorrectly classify the list `[1, 3, 2, 4]` as sorted, as the first two elements `1` and `3` are in order. A valid implementation should check:
+This reads as: "For all `L` and `S`, if `perm(L, S)` is true and `sorted(S)` is true, then `sort(L, S)` is true." Note that the requirement for the lists to be the same length is implicitly handled by the definition of a permutation.
 
-- The head of the list against the tail correctly.
+**The Sorted Predicate**
 
-### Correct Implementation
+The `sorted` predicate defines what it means for a list's elements to be in order. We define this using base cases and a recursive rule:
 
-To ensure proper validation, we can define the sorted condition as follows:
+*   **Base Case 1**: An empty list is sorted.
+*   **Base Case 2**: A singleton list (a list with one element) is sorted.
+*   **Recursive Case**: A list with at least two elements is sorted if the first element is less than or equal to the second, and the tail of the list (starting from the second element) is also sorted.
+
+In Prolog, the list pattern `[X, Y | L]` matches a list where `X` is the first element, `Y` is the second, and `L` is the rest of the list. The **less than or equal to** operator is written as `=<` (reversed from the usual `<=` to avoid confusion with arrows used in natural language parsing).
 
 ```prolog
-sorted([Y | L]) :- 
-    Y > 0,  % condition for an element
-    sorted(L).
+sorted([]).
+sorted([_]).
+sorted([X, Y | L]) :- X =< Y, sorted([Y | L]).
 ```
 
-### Summary of Results
+The use of the **underscore** (`_`) represents a **nameless variable**, used when the specific value of a variable does not matter for that rule.
 
-- If a query checks if a list is sorted, the answer will be:
-  - **Yes (True)**: If the list is indeed sorted.
-  - **No (False)**: If the list isn't sorted.
+**The Permutation Predicate**
 
-## Permutation of a List in Prolog
+The `perm` predicate defines when two lists contain the same elements. While we could manually define permutations for small lists, we need a recursive definition to handle lists of any length.
 
-### Definition of Permutations
+To define `perm([X | L], R)`, we say that `R` is a permutation of a list starting with `X` if:
+1.  We find a permutation of the remaining elements `L` and call it `P`.
+2.  We split `P` into two parts, `P1` and `P2`.
+3.  We insert `X` between `P1` and `P2` to form the resulting list `R`.
 
-A list `A` is a permutation of list `B` if:
+This logic uses the `append` predicate to handle the splitting and joining of lists. By using this recursive approach, we can simplify our code; the base case of an empty list `perm([], []).` combined with the recursive rule is sufficient to cover all list lengths.
 
-- They contain the same elements (the same frequency of each element).
-  
-### Base Cases for Permutation
+**The Append Predicate**
 
-1. **Empty List**: The permutation of an empty list is an empty list.
-2. **Singleton List**: A single element list is a permutation of itself and of its own reverse.
-  
-### Recursive Definition
-
-For lists longer than a singleton, we can define the process as follows:
-
-- The first element `x` must be part of the permutation:
-  - Create two parts of the permutation:
-    - `P1`: A subset of the remaining elements.
-    - `P2`: The rest of the elements.
-
-#### Logical Representation
-
-Using Prolog's `append` predicate, representing this relationship can be illustrated as:
+The `append` predicate is a fundamental building block in Prolog. `append(L1, L2, L3)` is true if `L3` is the result of concatenating `L1` and `L2`.
 
 ```prolog
-perm([X | L], R) :- 
-    perm(L, P), 
-    append(P1, P2, P),
-    append(P1, [X | P2], R).
+append([], L, L).
+append([X | L1], L2, [X | L3]) :- append(L1, L2, L3).
 ```
 
-### Streamlined Permutation Logic
+*   **Base Case**: Appending an empty list to any list `L` results in `L`.
+*   **Recursive Case**: To append a list starting with `X` to another list `L2`, the result must also start with `X`, followed by the result of appending the tail `L1` to `L2`.
 
-With the logical foundation now established, previous redundant clauses can be removed to simplify the permutation code further, as they become implicit in our logical formulation. 
+**Logic vs. Control**
 
-### Final Summary
+The sorting implementation described here is a "pure" logic program. We have defined the **specifications** of a sorted list without specifying an algorithm like Merge Sort or Quick Sort. 
 
-The full implementation of sorting and permutation in Prolog is vital for manipulating and evaluating lists effectively. Understanding the recursive definitions and logical structures allows for more efficient programming and clearer reasoning about list behavior in Prolog.
+However, there is a distinction between **logic** (correctness) and **control** (efficiency). While this program is logically correct and will produce the right answer, it is highly inefficient. The Prolog interpreter will essentially generate permutations of the list until it finds one that happens to be sorted. In a professional environment, you would use more efficient algorithms or the built-in `sort` predicate, but this exercise demonstrates the power of defining problems through logical relationships.
 
-## Section 6 (34:04 – 38:01)
+## Section 3 (39:08 – 1:09:58)
 
-# Study Notes on Prolog Concepts
+Section 1: Prolog's Execution Strategy and Sorting Efficiency
 
-## Overview of Variables in Prolog
-- **Logical Variables**: In Prolog, any identifier that begins with a capital letter is treated as a variable. 
-- **Scope of Variables**: 
-  - The scope of a logical variable is limited to the clause in which it appears. 
-  - A clause is defined as a statement that ends with a period.
-  
-- **Declaration**: 
-  - There is no need to explicitly declare variables in Prolog; you simply introduce them by using their names.
+Prolog uses a specific algorithm to evaluate queries: it always processes questions **left to right** and searches through clauses **top to bottom**. When implementing a "naive" sort using permutations, the interpreter follows a specific sequence:
+*   It calls a **permutation** predicate to generate a possible ordering of the input list.
+*   It then checks if that specific permutation is **sorted**.
+*   If the list is not sorted, Prolog **backtracks** to the permutation predicate to generate the next possibility and repeats the check.
 
-## Importance of Clarity and Efficiency
-- Simplifying logic can lead to both greater clarity and more concise code, resulting in improved efficiency.
+The efficiency of this approach is **factorial order** ($O(n!)$). While generating a single permutation might take $O(n)$ time, a list of length $n$ has $n!$ possible permutations. This is significantly worse than the $O(n^2)$ complexity of basic algorithms like **bubble sort** or **insertion sort**. While production environments like **G Prolog** include a built-in `sort` predicate written in Prolog, they use much more complex and efficient algorithms rather than this purely logical, "naive" version.
 
-## Discussion of Predicates
-- **Perm**: Refers to the predicate for determining permutations; it is defined in terms of itself as well as another predicate, `append`.
-- **Sort/Sorted**: Related to arranging lists but not fully covered in this segment.
+Section 2: Backtracking and Multiple Solutions
 
-## The Append Predicate
-The `append` predicate is essential for concatenating lists and is defined as follows:
+Prolog is capable of finding multiple valid answers to a single query. By default, the interpreter finds the first solution and pauses. If the user wants to see additional solutions, they must type a **semicolon (;)**. 
+*   In a sorting context, if a list contains numerically equivalent values (e.g., `3` and `3.0`), Prolog might treat them as interchangeable depending on the comparison operator used.
+*   If the list has $n$ items that are all numerically equal, the logic could technically return $n!$ "different" sorted permutations if the user keeps requesting more answers.
+*   Once the interpreter has exhausted all possibilities in the search tree, it will return **no**.
 
-### Base Case
-- **Empty List**: When the first list is empty, appending any list to it results in the second list:
-  ```prolog
-  append([], L, L).
-  ```
+Section 3: Numeric Comparison vs. Unification
 
-### Recursive Case
-- **Non-Empty List**: For a non-empty list, define the structure of the appending operation:
-  
-  *Let `X` be the head of the first list (L), and `M` be the second list.* The goal is to create a list that starts with `X` and appends the rest of the elements:
-  ```prolog
-  append([X|L], M, [X|LM]) :- append(L, M, LM).
-  ```
-  - Here, `LM` is the result of appending `L` to `M` and needs to begin with `X`.
+It is important to distinguish between how Prolog handles numeric values versus how it handles structural identity:
+*   **Numeric Comparison**: Predicates like "less than or equal to" perform numeric evaluation. In this context, an integer `0` and a floating-point `0.0` are considered equal.
+*   **Unification (Equality)**: This requires an exact match of terms. In unification, the integer `0` will not match the float `0.0` because they are different data types.
+*   **Improper Lists**: Prolog predicates often work on **improper lists** (lists terminated by something other than an empty list). Logically, any single value can be viewed as an improper list of length zero.
 
-### Visualization
-- Visualizing `append` can help understand the recursive construction of the final list.
+Section 4: Logical Variables and Goal-Oriented Execution
 
-## Conceptual Summary
-- Prolog allows for the creation of recursive predicates such as `Perm` and `append` without needing to specify low-level implementations (like bubble sort or merge sort).
-- The simple yet powerful nature of Prolog enables expressing complex conditions and operations through clear logic statements.
+Prolog is **goal-oriented**, meaning it attempts to match a question to the **head** of a clause. This process introduces **logical variables**, which behave differently than variables in functional or imperative languages:
+*   In languages like Java or C, a variable's value is typically known or can be looked up immediately.
+*   In Prolog, a logical variable can remain "unknown" or **unbound** for a long period. The interpreter may only determine its value much later in the execution, or perhaps never at all.
+*   When Prolog needs to create a temporary variable during execution, it generates a **system-generated variable**, usually represented by an underscore followed by a number (e.g., `_29`).
 
-## Next Steps
-- Continue exploring the `append` predicate to better understand how list operations function in Prolog.
-- Address any further questions on how `Perm` or related concepts are defined and utilized.
+Section 5: The Reversibility of the Append Predicate
 
-## Section 7 (38:01 – 41:58)
+The `append` predicate demonstrates the power of logic programming because it can be run "backwards." While a functional language uses append to take two inputs and produce one output, Prolog treats `append(X, Y, Z)` as a relationship between three variables.
+*   **Forward usage**: Provide `X` and `Y` to find their concatenation `Z`.
+*   **Backward usage**: Provide the result `Z` and ask Prolog to find all possible combinations of `X` and `Y` that could form that result.
 
-# Study Notes on Prolog Sorting and Efficiency
+For example, asking `append(X, Y, [3, 2, 19])` will result in Prolog iterating through all possible split points of the list:
+1.  `X = [], Y = [3, 2, 19]`
+2.  `X = [3], Y = [2, 19]`
+3.  `X = [3, 2], Y = [19]`
+4.  `X = [3, 2, 19], Y = []`
 
-## Prolog Overview
-- Prolog is a logical programming language that uses specifications to derive answers.
-- The Prolog interpreter examines logical queries to provide results.
+This reversibility is what allows the `permutation` predicate to work. It uses `append` backwards to decompose lists and then reconstructs them in different orders.
 
-## Sorting in Prolog
-- Sorting can be implemented in Prolog, but the efficiency of the code matters.
-- A simplistic sorting example may work logically but can be inefficient in terms of control and algorithm design.
+Section 6: Logic vs. Control
 
-### Key Points about Sorting
-- Simple Prolog sorting implementations can lead to inefficient algorithms, particularly due to the nature of how Prolog evaluates expressions.
-- The logic behind sorting may be correct, but control over the algorithm contributes significantly to its efficiency.
+In pure logic, predicates connected by "and" are **commutative** and **associative**, meaning their order should not matter. However, in Prolog, the order of predicates is a matter of **control** and is vital for performance and termination.
+*   Changing the order of goals in a clause does not change the logical meaning, but it can drastically change how the interpreter searches for the answer.
+*   Placing a predicate that generates an infinite search space (like an unconstrained `append`) before a narrowing constraint can lead to infinite loops or extreme inefficiency.
+*   Programmers must carefully order their code to ensure the interpreter encounters constraints early enough to prune the search tree effectively.
 
-## Permutation-based Sorting Algorithm
-- When sorting, Prolog may initially use a permutation generator (e.g., `perm`).
-- The process involves the following steps:
-  1. Generate a permutation of the input list.
-  2. Check if the generated permutation is sorted.
-  3. If not sorted, generate the next permutation and repeat the check.
+## Section 4 (1:09:58 – 1:33:27)
 
-### Efficiency of the Perm Algorithm
-- The performance of such a permutation-based approach is factorial in nature:
-  - **Time Complexity**: \(O(n!)\) where \(n\) is the number of items in the list.
-  - The reason for this computational complexity is that the `perm` function generates all possible permutations.
-- Generating a single permutation for an n-item list is \(O(n)\), but the total number of permutations significantly increases this to at least \(O(n!)\).
+Prolog Syntax and Terms
 
-## Comparison with Traditional Sorting Algorithms
-- Common sorting algorithms discussed in earlier courses (e.g., CSS 31) include:
-  - **Bubble Sort and Insertion Sort**: Typically have a time complexity of \(O(n^2)\).
-- Permutation generation is generally much less efficient compared to these traditional algorithms, making it impractical for real-world scenarios.
+The core of Prolog is built out of **terms**. Every piece of data or code in Prolog is a term. There are four primary types of terms:
 
-## Best Practices
-- Avoid simplistic or brute force Prolog sorting implementations in practical applications, especially in professional settings such as finance.
-- Refer to efficient implementations found in libraries or established code, such as the source code for G Prolog, which contain optimized sorting algorithms.
-  
-## Conclusion
-- While Prolog's logic capabilities allow for intuitive implementation of sorting algorithms, it is crucial to understand and optimize the control aspect to ensure algorithms run efficiently. 
+1. **Atoms**: These are sometimes called symbols in other languages. An **atom** is unique and equals only itself. It does not have a "value" in the traditional sense; it is simply a constant.
+    * Syntax: A lowercase letter followed by any number of letters, digits, or underscores (e.g., `a`, `abc`, `a9_x`).
+    * Quoted Atoms: You can create an atom with arbitrary characters, including spaces and special symbols, by enclosing them in single quotes (e.g., `'O''clock'`). To include a single quote inside a quoted atom, you double it.
 
-### Questions
-- Encourage discussion and clarification on the efficiency of different sorting approaches and how they can be implemented in Prolog effectively.
+2. **Numbers**: Prolog supports standard numeric types including integers and floating-point numbers. The syntax is similar to most other programming languages.
 
-## Section 8 (41:58 – 46:01)
+3. **Logical Variables**: These are distinct from atoms because they can hold values.
+    * Syntax: A **logical variable** must start with an uppercase letter or an underscore (e.g., `X`, `MyVariable`, `_temp`).
+    * Unbound vs. Bound: Variables start as **unbound**, meaning they have no value yet. This is not an error; it simply represents an unknown. As computation succeeds, a variable can become **bound** to a specific term.
+    * Immutability and Backtracking: Once a variable is bound to a value, it cannot be changed via an assignment statement. There is no "assignment" in Prolog like in Python or Java. The only way a variable becomes **unbound** again is if the computation fails and the system **backtracks** to try a different path.
 
-# Study Notes: Prolog Logical Variables and Comparisons
+4. **Structures**: A **structure** is a term that represents a data structure. It consists of an atom (called the **functor** or **function symbol**) followed by one or more arguments enclosed in parentheses.
+    * Syntax: `functor(arg1, arg2, ..., argn)`.
+    * Arity: The number of arguments is called the **arity**. A structure is often referred to by its functor and arity, such as `append/3` or `parent/2`.
+    * Nature of Structures: Despite looking like function calls, structures are just data constructors. Writing `plus(2, 2)` does not "calculate" 4; it simply builds a data structure containing the atom `plus` and the integers `2` and `2`.
 
-## Overview of Logical Variables
-- In Prolog, logical variables can yield multiple possible values in response to queries.
-- The interpreter is designed to handle situations where multiple answers may exist.
+Syntactic Sugar and Operators
 
-## Handling Multiple Answers
-- When multiple answers are possible, Prolog will provide one answer initially. For example:
-  - If asked to sort two equal numeric values (like `3` and `3.0`), it may return one representation (e.g., `R = 3`).
-- To retrieve another answer, the user can input a semicolon (`;`). This prompts Prolog to search for additional valid solutions.
-  
-### Example Scenario
-- Consider a query involving the numbers `3` and `3.0`:
-  ```prolog
-  ?- sort([3, 3.0], SortedList).
-  ```
-  - Prolog might return:
+Prolog provides **syntactic sugar** to make structures easier to read and write. This is most visible with operators and lists.
+
+**Binary and Unary Operators**
+Many common symbols are actually infix or prefix operators that the Prolog parser converts into standard structures.
+* The expression `3 + 4 * 5` is syntactic sugar for the structure `+(3, *(4, 5))`.
+* The negative sign in `-3` is a unary operator equivalent to `-(3)`.
+* Logical operators are also structures: the comma `,` represents **AND**, and the semicolon `;` represents **OR**. For example, `(A, B)` is internally treated as a structure with the functor `,/2`.
+
+**List Syntax**
+Lists are one of the most common uses of syntactic sugar in Prolog.
+* The empty list `[]` is a special atom.
+* A list like `[a, b]` is sugar for a nested structure using the dot functor `./2`. It is equivalent to `.(a, .(b, []))`.
+* The vertical bar syntax `[Head | Tail]` is used to deconstruct or construct lists. `[X | L]` is equivalent to `.(X, L)`.
+
+Arithmetic and Ground Terms
+
+Because structures are just data, Prolog requires a special mechanism to actually perform calculations. This is done using the **is** operator.
+
+The **is** operator takes a variable on the left and an arithmetic expression on the right. It evaluates the expression and binds the result to the variable.
+```prolog
+X is 2 + 2.
+```
+In this example, Prolog evaluates the structure `+(2, 2)` to the number `4` and binds `X` to `4`.
+
+**Ground Terms**
+A **ground term** is a term that contains no logical variables. For the `is` operator to work, the right-hand side must be a ground term at the time of evaluation. If the expression contains an unbound variable (e.g., `X is Y + 2` where `Y` is not yet bound), Prolog will throw an error. This is a departure from the purely relational nature of predicates like `append`, which can often be run "backwards" with unknown variables. Arithmetic in Prolog is generally functional and requires known values to proceed.
+
+## Section 5 (1:33:27 – 1:49:57)
+
+**Prolog Clause Types**
+
+Prolog programs are essentially collections of **clauses**. Each clause is a term, but they are categorized into three major forms based on their structure and how the interpreter uses them:
+
+*   **Facts**: These are unconditional truths. A fact is a single term ending in a period without a turnstile (`:-`) symbol. Because they are "unconditional," the Prolog interpreter can use them to prove a goal immediately. Facts can be very specific or contain **logical variables** to make them general.
+    *   `empty_list([]).` (A specific fact with no variables).
+    *   `singleton([_]).` (A general fact true for any list with exactly one element, where the underscore represents an anonymous variable).
+*   **Rules**: These are conditional truths that tell the interpreter how to prove something. A rule consists of a **head** and a **body**, separated by the turnstile symbol `:-`. The interpreter can only prove the head if all conditions in the body are true. Rules introduce **subgoals**, which require the interpreter to perform more work to reach a conclusion.
+*   **Queries (Goals)**: These are the instructions given to the Prolog interpreter to initiate a proof. Unlike facts and rules, which are stored in the database, a query has only a body and no head. The interpreter only "springs into action" when it receives a query.
+
+A **predicate** is defined as an ordered list of facts and rules that share the same name and the same **arity** (number of arguments). For convenience, we refer to the part of the clause before the turnstile as the **head**. Facts are essentially rules where the body is the built-in predicate **true**, which always succeeds.
+
+**The Prolog Execution Model**
+
+The Prolog interpreter operates using **backwards chaining**. It is entirely goal-oriented; it does not process the facts and rules in its database until a query is issued. Once a query is made, the interpreter attempts to match the goal against the heads of the clauses in the database.
+
+*   **Database Order**: The interpreter searches the database from top to bottom (left to right across the entries) in the exact order the clauses were specified. This provides the programmer with a level of control over the execution flow.
+*   **Depth-First Search (DFS)**: Prolog explores possible solutions using a depth-first strategy. If a goal matches a rule head, the interpreter immediately tries to prove the subgoals in that rule's body.
+*   **Backtracking**: If the interpreter hits a dead end (a failure), it backtracks to the most recent "choice point" and tries the next available fact or rule in the database order.
+
+**Built-in Predicates and Control Flow**
+
+Prolog includes several built-in predicates that allow programmers to manipulate the search and proof process:
+
+*   **true**: A predicate with arity zero that always succeeds.
+*   **fail**: A predicate that always fails. When the interpreter encounters `fail`, it is forced to backtrack. This is often used to find multiple solutions by intentionally failing after a side effect (like printing) is triggered.
+*   **Predicate Warnings**: If you call a predicate that does not exist in the database, most interpreters (like SWI-Prolog) will issue a warning. However, `fail` is a special case; it is recognized as a standard way to trigger failure and does not produce a "missing predicate" warning.
+
+**Recursion and Loops**
+
+Because Prolog relies on depth-first search, the way rules are written significantly impacts whether a program succeeds or enters an infinite loop.
+
+*   **Infinite Recursion**: A rule like `loop :- loop.` is logically a tautology (X is true if X is true), but procedurally, it causes the interpreter to call the same goal infinitely, never reaching a base case or a fact.
+*   **The repeat Predicate**: This is a built-in predicate used to create looping behavior. It is defined such that it succeeds initially, and if the interpreter backtracks into it, it succeeds again.
+    ```prolog
+    % Logical definition of repeat
+    repeat.
+    repeat :- repeat.
     ```
-    SortedList = [3.0, 3]
-    ```
-  - Both `3` and `3.0` are numerically equal, making both valid solutions.
-
-## Numeric Equality vs. Exact Equality
-- Prolog differentiates between numeric equality (which treats different numeric representations as equivalent) and exact equality (which requires an exact match).
-  - **Numeric comparison**:
-    - Example: `-0.0` is considered equal to `0`.
-  - **Exact comparison**:
-    - Example: `0` is **not** equal to `0.0`; they are treated as different values.
-  
-## Working with Lists
-- When evaluating whether two lists (e.g., `L` and `M`) are equivalent, Prolog checks:
-  1. Both lists are of the same size.
-  2. The lists are concatenated correctly.
-  
-## Efficiency Considerations
-- The performance of logical queries can be impacted by the size of the lists involved:
-  - A comparison involving a long list (`L`) could have a time complexity of **O(n)**, where **n** is the number of elements in the list.
-
-## Prolog's Goal-Oriented Computation
-- Prolog operates on a goal-oriented basis:
-  - When a query is made, Prolog matches this to the head of a clause in its knowledge base.
-  - During this process, Prolog determines which variables (like `X`, `R`, etc.) can be assigned values based on the current goals.
-- As the computation progresses, a logical variable can temporarily hold an unspecified value (i.e., it may be "unknown").
-
-## Conclusion
-Understanding the nuances of logical variables, equality, and the efficiency of list operations in Prolog is crucial for writing effective queries and understanding the behavior of the interpreter. Always distinguish between numeric and exact comparisons to prevent logic errors in your Prolog programs.
-
-## Section 9 (46:01 – 59:04)
-
-# Study Notes on Prolog and Logic Variables
-
-## Overview of Prolog
-- Prolog is a logical programming language that allows for the representation of knowledge and the execution of queries.
-- Unlike imperative or functional programming languages, Prolog uses rules and facts to derive conclusions.
-
-## Logical Variables
-- In Prolog, a logical variable can remain unknown for a period, as opposed to simply being assigned a value immediately.
-- When querying, Prolog may not provide a definitive value but a placeholder indicating that the value will be determined later.
-
-### Example: Using `append/3`
-- The `append/3` predicate is commonly used in Prolog to concatenate two lists into a third.
-- The syntax for the `append` predicate is:
-  ```prolog
-  append(List1, List2, Result).
-  ```
-
-### Querying with Prolog
-- When querying a Prolog predicate, you can ask Prolog to find values for variables without knowing them beforehand.
-- Example Query:
-  ```prolog
-  append(X, Y, Z).
-  ```
-  - Here, `X`, `Y`, and `Z` are logical variables that Prolog will attempt to assign values to that satisfy the append predicate.
-
-### Prolog's Backtracking Mechanism
-- Prolog operates in a goal-oriented manner, progressing through available clauses to find a solution.
-- Use of the semicolon (`;`) allows the user to request additional answers. Prolog will attempt to backtrack and explore alternative solutions.
-- For example:
-  ```prolog
-  ?- append(X, Y, Z).
-  ```
-  - The first answer might be `X = []`, `Y = L`, `Z = L`. Subsequent queries with `;` will find different combinations.
-
-## Behavior of the `append/3` Predicate
-- `append([], L, L).` — Concatenating an empty list with any list `L` yields `L`.
-- `append([H|T], L, [H|R]).` — To append a non-empty list, take the head `H` and append the tail `T` to `L`, resulting in a new list whose head is `H` and whose tail is the result of the recursive call.
-  
-### Example Outputs
-- When asked for `append(X, Y, Z)`, Prolog can output:
-  - `X = []`, `Y = L`, `Z = L` (where L can be any list)
-  - `X = [A]`, `Y = B`, `Z = [A|B]` 
-  - This shows the flexibility of the `append` predicate, proving it as a logical relationship, not a strict function.
-
-## Recursive Nature of Prolog
-- The execution within Prolog resembles a recursive function call.
-- Each level of the execution may create its own logical variables, akin to local variables in a programming language function.
-
-### Working Mechanism
-1. Execute the main goal (e.g., `append(X, Y, Z)`).
-2. The interpreter looks for clauses that fulfill the goal.
-3. Logical variables are created and assigned during these calls, enabling the search for all possible solutions.
-4. After finding an answer, Prolog prompts for more solutions on additional semicolon (;) input.
-5. This process continues until all possibilities are exhausted or stack space is depleted.
-
-### Key Points
-- Prolog allows for querying in reverse, extracting inputs from known outputs unlike traditional functional approaches.
-- Not every predicate works perfectly in reverse; however, for simple predicates like `append` and `member`, it provides reliable results.
-
-## Section 10 (59:04 – 1:09:58)
-
-# Study Notes on Permutations and Prolog Recursion
-
-## Overview of Permutations in Code
-- **Permutations**: When coding for generating permutations, the function calls itself, resulting in multiple recursive calls.
-- **Execution Flow**:
-  - The initial call computes a permutation, generating an actual list.
-  - The `append` function is involved but fundamentally runs in a backward manner, which permits the exploration of all possible ways to combine lists.
-
-## Understanding Recursive Behavior
-- **Recursive Nature**:
-  - When `perm` is called with a list of three items, it expands into six different permutations.
-  - The backward execution of `append` yields alternate solutions, demonstrating the flexibility and power of recursion.
-
-## Considerations for Performance
-- **Placement of Logic**:
-  - The ordering of calls within the code can significantly affect performance.
-  - Placing certain operations at different points can lead to inefficiencies.
-  
-- **Issues with Early Calls**:
-  - If computations involving `p1`, `p2`, and `p` are placed incorrectly, Prolog may return multiple possible solutions.
-  - Asking Prolog to append lists without knowing one of the lists leads to potentially infinite solutions.
-
-## Control Reasoning in Prolog
-- **Logical Connections**:
-  - The logic in Prolog, such as connections defined by and/or, remains unchanged regardless of the order.
-  - However, the control structure is sensitive to the order of operations specified; thus, inefficient ordering can degrade performance.
-
-- **Potential for Inefficiency**:
-  - Prolog's execution mechanism can result in infinite loops if the logic is incorrectly ordered.
-  - Misordering can lead to an exponential increase in computation time, potentially changing the complexity from \(O(n!)\) to \(O(n!^2)\) or worse.
-
-## Common Pitfalls
-- **Error Handling**:
-  - While an erroneous setup might produce answers initially, continued querying (e.g., repeated use of semicolon) can lead to execution loops.
-  - It’s important to balance correctness in answers with efficiency in computation to provide satisfactory performance.
-
-## Conclusion
-- Understanding the recursive mechanics and control flow in Prolog is crucial for implementing efficient algorithms.
-- Careful consideration of function order and logical structuring can significantly enhance performance while avoiding infinite loops or inefficiencies. 
-
----
-
-### Notes for Further Study
-- Explore additional examples of Prolog recursion to solidify understanding.
-- Review more about control flow and its impact on logical programming efficiency.
-
-## Section 11 (1:09:58 – 1:49:57)
-
-# Prolog Syntax Study Notes
-
-## 1. Overview of Prolog Syntax
-- Prolog has a simple core syntax with extensions making it more versatile.
-- A Prolog program is constructed from **terms**, which can be:
-  - Atoms
-  - Numbers
-  - Variables
-  - Structures
-
-## 2. Types of Terms
-
-### 2.1. Atoms
-- Definition: Atoms are unique symbols.
-- Characteristics:
-  - Each atom equals only itself (no assignments).
-  - Syntax:
-    - Begins with a lowercase letter followed by letters, digits, or underscores.
-    - Alternatively, can be quoted for arbitrary characters with apostrophes (e.g., `'o\'clock'`).
-  
-#### Examples of Atoms:
-- `abc`
-- `a9_x`
-- `'some atom'`
-- `'another example'`
-
-### 2.2. Numbers
-- Definition: All numbers are considered terms, similar to other programming languages.
-- Types:
-  - Integers
-  - Floating point numbers
-- Syntax is straightforward and similar to other languages.
-
-### 2.3. Variables
-- Definition: Logical variables that start unbound and can change.
-- Characteristics:
-  - Syntax: Begins with an uppercase letter or an underscore (e.g., `X`, `_var`).
-  - An unbound variable is considered as a "question mark" until bound to a value.
-  - Once bound, it cannot change unless a failure or backtracking occurs.
-  
-#### Example of Variable Behavior:
-- Initial state: `X` (unbound)
-- After computation: `X = 5` (bound)
-
-### 2.4. Structures
-- Definition: Used to create data structures in Prolog.
-- Syntax: 
-  - Syntax consists of an atom (functor) followed by parentheses containing terms (e.g., `f(A, B)`).
-  - Must have at least one argument (arity > 0).
-
-#### Examples of Structures:
-- `point(3, 4)` (functor `point` with two arguments)
-- `append(A, B, C)` (append structure with three arguments)
-
-### 2.5. Arity
-- The number of arguments a structure takes.
-- Example: 
-  - `append/3` indicates `append` is a functor with arity 3.
-
-## 3. Syntactic Sugar
-Prolog provides additional syntax to make programming easier.
-
-### 3.1. Operators
-- Prolog has binary and unary operators.
-  
-#### Examples:
-- Binary: `3 + 4 * 5` is syntactic sugar for `plus(3, multiply(4, 5))`
-- Unary: `-2` is equivalent to `minus(2)`
-
-### 3.2. Lists
-- Lists in Prolog are syntactical sugar for data structures built with `./2`.
-  
-#### Examples:
-- `[]` is shorthand for the empty list.
-- `[1, 2, 3]` is equivalent to `1 . (2 . (3 . []))`.
-
-## 4. Arithmetic in Prolog
-- Prolog has an infix operator `is` for basic arithmetic.
-  
-### Example:
-```prolog
-M is N + 2.
-```
-- Internal processing requires a ground term (no unbound variables).
-
-### Ground Terms
-- Definition: A term that contains no unbound variables.
-- Important for correctness and efficiency.
-
-## 5. Prolog Clause Types
-Prolog programs consist of clauses, which can take different forms.
-
-### 5.1. Facts
-- Definition: Unconditional truths ending with a period.
-  
-#### Example:
-```prolog
-likes(john, pizza).
-```
-
-### 5.2. Rules
-- Definition: Conditional clauses with a head and body, using `:-` (turnstile).
-  
-#### Example:
-```prolog
-loves(X, Y) :- likes(X, Z), likes(Z, Y).
-```
-
-### 5.3. Queries
-- Definition: Goals that ask the Prolog interpreter to find solutions.
-  
-#### Syntax Example:
-```prolog
-?- append(A, B, [1, 2, 3]).
-```
-- Queries do not have heads; only bodies.
-
-## 6. Control Flow in Prolog
-- Prolog uses a **depth-first search** for proving goals.
-- Backtracking is utilized when a goal fails, allowing exploration of alternative paths.
-
-### 6.1. Built-in Predicates
-- Example of built-in predicates like `true` (always succeeds) and `fail` (always fails).
-
-## 7. Infinite Loops and Backtracking
-- Care should be taken to avoid creating clauses that lead to infinite loops.
-- **repeat** predicate allows for repeating a success while keeping Prolog in motion until a backtrack or stop occurs.
-
-### Example of Loop:
-```prolog
-loop :- loop.
-```
-- This clause leads to an infinite recursion.
-
-### Example of repeat:
-```prolog
-repeat.
-```
-- This will cause repeated outputs of success on backtracking.
-
-## Conclusion
-Prolog’s syntax, while simple at its core, enables powerful logical reasoning through structured terms, clauses, and built-in predicates, underpinning its capability as a logic programming language. Understanding the structure and control of clauses, as well as utilizing operators and syntax, is crucial for successful programming in Prolog.
+*   **Proof Trees**: When writing clauses, you must consider the **proof tree** being generated. A successful predicate should eventually lead to a branch that terminates in a fact. If the tree only grows deeper without hitting a success branch (as in a poorly structured recursive rule), the program will hang or crash.

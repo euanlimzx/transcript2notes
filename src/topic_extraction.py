@@ -2,8 +2,7 @@
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from openai import OpenAI
-
+from .llm_client import complete
 from .models import ParsedLine
 from .stage1_parse import seconds_to_timestamp, slice_for_llm, MAX_CHARS_PER_SLICE
 from . import prompts_config
@@ -41,33 +40,31 @@ def _parse_topic_list(content: str) -> list[str]:
     return topics
 
 
-def _extract_topics_full(client: OpenAI, transcript_text: str, model: str) -> list[str]:
+def _extract_topics_full(transcript_text: str, model: str, api_key: str | None) -> list[str]:
     """Option A: single call with full transcript."""
-    resp = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": prompts_config.TOPIC_EXTRACTION_FULL},
-            {"role": "user", "content": transcript_text},
-        ],
+    raw = complete(
+        prompts_config.TOPIC_EXTRACTION_FULL,
+        transcript_text,
+        model,
+        api_key=api_key,
     )
-    raw = (resp.choices[0].message.content or "").strip()
     return _parse_topic_list(raw)
 
 
-def _extract_topics_chunk(client: OpenAI, chunk_text: str, model: str) -> list[str]:
+def _extract_topics_chunk(chunk_text: str, model: str, api_key: str | None) -> list[str]:
     """Option B: one chunk - return topic list for this segment."""
-    resp = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": prompts_config.TOPIC_EXTRACTION_CHUNK},
-            {"role": "user", "content": chunk_text},
-        ],
+    raw = complete(
+        prompts_config.TOPIC_EXTRACTION_CHUNK,
+        chunk_text,
+        model,
+        api_key=api_key,
     )
-    raw = (resp.choices[0].message.content or "").strip()
     return _parse_topic_list(raw)
 
 
-def _merge_topic_lists(client: OpenAI, segment_topic_lists: list[list[str]], model: str) -> list[str]:
+def _merge_topic_lists(
+    segment_topic_lists: list[list[str]], model: str, api_key: str | None
+) -> list[str]:
     """Merge per-segment topic lists into one ordered list via LLM."""
     formatted = "\n".join(
         f"Segment {i + 1}: " + ", ".join(topics)
@@ -76,20 +73,18 @@ def _merge_topic_lists(client: OpenAI, segment_topic_lists: list[list[str]], mod
     )
     if not formatted.strip():
         return []
-    resp = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": prompts_config.TOPIC_MERGE},
-            {"role": "user", "content": formatted},
-        ],
+    raw = complete(
+        prompts_config.TOPIC_MERGE,
+        formatted,
+        model,
+        api_key=api_key,
     )
-    raw = (resp.choices[0].message.content or "").strip()
     return _parse_topic_list(raw)
 
 
 def extract_topics(
     lines: list[ParsedLine],
-    model: str = "gpt-4o-mini",
+    model: str = "gemini-3-flash-preview",
     api_key: str | None = None,
 ) -> list[str]:
     """
@@ -100,13 +95,12 @@ def extract_topics(
     if not lines:
         return []
 
-    client = OpenAI(api_key=api_key)
     total_chars = sum(len(ln.text) + 1 for ln in lines)
 
     if total_chars <= TOPIC_EXTRACTION_MAX_CHARS:
         logger.info("Topic extraction: Option A (full transcript, %d chars)", total_chars)
         transcript_text = _format_lines_for_prompt(lines)
-        return _extract_topics_full(client, transcript_text, model)
+        return _extract_topics_full(transcript_text, model, api_key)
 
     # Option B: chunk and merge
     chunks = slice_for_llm(lines)
@@ -120,7 +114,7 @@ def extract_topics(
     workers = min(MAX_CONCURRENT_TOPIC_REQUESTS, len(chunk_texts))
     with ThreadPoolExecutor(max_workers=workers) as executor:
         futures = {
-            executor.submit(_extract_topics_chunk, client, ct, model): i
+            executor.submit(_extract_topics_chunk, ct, model, api_key): i
             for i, ct in enumerate(chunk_texts)
         }
         results: list[tuple[int, list[str]]] = []
@@ -136,4 +130,4 @@ def extract_topics(
     segment_topic_lists = [t for _, t in results]
     if not segment_topic_lists:
         return []
-    return _merge_topic_lists(client, segment_topic_lists, model)
+    return _merge_topic_lists(segment_topic_lists, model, api_key)

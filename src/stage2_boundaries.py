@@ -2,8 +2,7 @@
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from openai import OpenAI
-
+from .llm_client import complete
 from .models import ParsedLine, Segment
 from .stage1_parse import timestamp_to_seconds, seconds_to_timestamp
 from . import prompts_config
@@ -33,20 +32,13 @@ def _format_slice_for_prompt(lines: list[ParsedLine], use_line_numbers: bool = F
 
 
 def _call_llm_for_slice(
-    client: OpenAI,
     slice_text: str,
     model: str,
     system_prompt: str,
+    api_key: str | None,
 ) -> str:
     """Single LLM call for one slice. Returns raw response content."""
-    resp = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": slice_text},
-        ],
-    )
-    return (resp.choices[0].message.content or "").strip()
+    return complete(system_prompt, slice_text, model, api_key=api_key)
 
 
 def _parse_timestamps_from_response(content: str) -> list[int]:
@@ -219,7 +211,7 @@ def _slice_start_indices(lines: list[ParsedLine], slices: list[list[ParsedLine]]
 def run_stage2(
     lines: list[ParsedLine],
     slices: list[list[ParsedLine]],
-    model: str = "gpt-4o-mini",
+    model: str = "gemini-3-flash-preview",
     api_key: str | None = None,
     topics: list[str] | None = None,
 ) -> list[Segment]:
@@ -231,19 +223,18 @@ def run_stage2(
     if not lines:
         return []
 
-    client = OpenAI(api_key=api_key)  # None => env OPENAI_API_KEY
     has_timestamps = all(ln.seconds is not None for ln in lines)
 
     if has_timestamps:
-        return _run_stage2_timestamped(client, lines, slices, model, topics)
-    return _run_stage2_line_numbers(client, lines, slices, model, topics)
+        return _run_stage2_timestamped(lines, slices, model, api_key, topics)
+    return _run_stage2_line_numbers(lines, slices, model, api_key, topics)
 
 
 def _run_stage2_timestamped(
-    client: OpenAI,
     lines: list[ParsedLine],
     slices: list[list[ParsedLine]],
     model: str,
+    api_key: str | None,
     topics: list[str] | None,
 ) -> list[Segment]:
     """Timestamp-based boundary detection (original flow)."""
@@ -255,7 +246,7 @@ def _run_stage2_timestamped(
 
     if len(slices) == 1:
         slice_text = _format_slice_for_prompt(slices[0], use_line_numbers=False)
-        content = _call_llm_for_slice(client, slice_text, model, system_prompt)
+        content = _call_llm_for_slice(slice_text, model, system_prompt, api_key)
         all_seconds = _parse_timestamps_from_response(content)
     else:
         slice_texts = [_format_slice_for_prompt(s, use_line_numbers=False) for s in slices]
@@ -264,7 +255,7 @@ def _run_stage2_timestamped(
         with ThreadPoolExecutor(max_workers=workers) as executor:
             futures = {
                 executor.submit(
-                    _call_llm_for_slice, client, st, model, system_prompt
+                    _call_llm_for_slice, st, model, system_prompt, api_key
                 ): i
                 for i, st in enumerate(slice_texts)
             }
@@ -290,10 +281,10 @@ def _run_stage2_timestamped(
 
 
 def _run_stage2_line_numbers(
-    client: OpenAI,
     lines: list[ParsedLine],
     slices: list[list[ParsedLine]],
     model: str,
+    api_key: str | None,
     topics: list[str] | None,
 ) -> list[Segment]:
     """Line-number-based boundary detection when transcript has no timestamps."""
@@ -307,7 +298,7 @@ def _run_stage2_line_numbers(
 
     if len(slices) == 1:
         slice_text = _format_slice_for_prompt(slices[0], use_line_numbers=True)
-        content = _call_llm_for_slice(client, slice_text, model, system_prompt)
+        content = _call_llm_for_slice(slice_text, model, system_prompt, api_key)
         line_nums = _parse_line_numbers_from_response(content)
         global_indices = [start_indices[0] + (n - 1) for n in line_nums]
     else:
@@ -317,7 +308,7 @@ def _run_stage2_line_numbers(
         with ThreadPoolExecutor(max_workers=workers) as executor:
             futures = {
                 executor.submit(
-                    _call_llm_for_slice, client, st, model, system_prompt
+                    _call_llm_for_slice, st, model, system_prompt, api_key
                 ): i
                 for i, st in enumerate(slice_texts)
             }
