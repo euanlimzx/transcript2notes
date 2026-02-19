@@ -40,7 +40,12 @@ def seconds_to_timestamp(seconds: int) -> str:
 
 
 def parse_transcript(path: Path | str) -> list[ParsedLine]:
-    """Parse transcript file into ordered list of (seconds, text). Skips blank lines."""
+    """
+    Parse transcript file into ordered list of ParsedLine.
+    Accepts any format: if a line starts with M:SS or H:MM:SS followed by space, that timestamp
+    is parsed and stored; otherwise the whole line is kept as text with seconds=None.
+    Blank lines are skipped.
+    """
     path = Path(path)
     lines: list[ParsedLine] = []
     with path.open(encoding="utf-8") as f:
@@ -48,22 +53,23 @@ def parse_transcript(path: Path | str) -> list[ParsedLine]:
             raw = raw.strip()
             if not raw:
                 continue
-            # First space separates timestamp from text
             first_space = raw.find(" ")
-            if first_space <= 0:
-                continue
-            ts_str, text = raw[:first_space], raw[first_space + 1 :].strip()
-            sec = timestamp_to_seconds(ts_str)
-            if sec is None:
-                continue
-            lines.append(ParsedLine(seconds=sec, text=text))
+            if first_space > 0:
+                ts_str, rest = raw[:first_space], raw[first_space + 1 :].strip()
+                sec = timestamp_to_seconds(ts_str)
+                if sec is not None:
+                    lines.append(ParsedLine(text=rest, seconds=sec))
+                    continue
+            # No valid leading timestamp: treat entire line as text
+            lines.append(ParsedLine(text=raw, seconds=None))
     return lines
 
 
 def slice_for_llm(lines: list[ParsedLine]) -> list[list[ParsedLine]]:
     """
     If total character count exceeds MAX_CHARS_PER_SLICE, return overlapping
-    time-based slices. Otherwise return [lines] (single slice).
+    slices. When all lines have timestamps, use time-based windows; otherwise
+    use character-based chunks with overlap. Otherwise return [lines] (single slice).
     """
     total_chars = sum(len(line.text) + 1 for line in lines)  # +1 for newline
     if total_chars <= MAX_CHARS_PER_SLICE:
@@ -72,17 +78,45 @@ def slice_for_llm(lines: list[ParsedLine]) -> list[list[ParsedLine]]:
     if not lines:
         return []
 
-    t_start = lines[0].seconds
-    t_end = lines[-1].seconds
-    slices: list[list[ParsedLine]] = []
-    window_start = t_start
-    while window_start < t_end:
-        window_end = window_start + SLICE_WINDOW_SEC
-        chunk = [ln for ln in lines if window_start <= ln.seconds < window_end]
-        if chunk:
-            slices.append(chunk)
-        window_start = window_end - SLICE_OVERLAP_SEC
-    return slices if slices else [lines]
+    has_timestamps = all(ln.seconds is not None for ln in lines)
+    if has_timestamps and lines[0].seconds is not None and lines[-1].seconds is not None:
+        t_start = lines[0].seconds
+        t_end = lines[-1].seconds
+        slices: list[list[ParsedLine]] = []
+        window_start = t_start
+        while window_start < t_end:
+            window_end = window_start + SLICE_WINDOW_SEC
+            chunk = [ln for ln in lines if ln.seconds is not None and window_start <= ln.seconds < window_end]
+            if chunk:
+                slices.append(chunk)
+            window_start = window_end - SLICE_OVERLAP_SEC
+        return slices if slices else [lines]
+
+    # No timestamps: character-based slicing with overlap
+    overlap_chars = min(MAX_CHARS_PER_SLICE // 4, 20_000)  # 25% or 20k chars overlap
+    slices = []
+    start = 0
+    while start < len(lines):
+        chunk: list[ParsedLine] = []
+        nchars = 0
+        i = start
+        while i < len(lines) and nchars + len(lines[i].text) + 1 <= MAX_CHARS_PER_SLICE:
+            chunk.append(lines[i])
+            nchars += len(lines[i].text) + 1
+            i += 1
+        if not chunk:
+            chunk = [lines[start]]
+            start += 1
+        else:
+            start = i
+            # Back up by overlap (by chars) for next window
+            if start < len(lines) and overlap_chars > 0:
+                overlap_remaining = overlap_chars
+                while start > 0 and overlap_remaining > 0:
+                    start -= 1
+                    overlap_remaining -= len(lines[start].text) + 1
+        slices.append(chunk)
+    return slices
 
 
 def run_stage1(path: Path | str) -> tuple[list[ParsedLine], list[list[ParsedLine]]]:

@@ -16,13 +16,20 @@ BOUNDARY_MERGE_WINDOW_SEC = 30
 # Minimum segment duration in seconds; boundaries that would create a shorter segment are dropped (Fix 2)
 MIN_SEGMENT_DURATION_SEC = 180
 
+# When using line-number boundaries: minimum lines per segment (avoid tiny segments)
+MIN_LINES_PER_SEGMENT = 15
+
 # Cap concurrent API calls to respect rate limits
 MAX_CONCURRENT_REQUESTS = 5
 
 
-def _format_slice_for_prompt(lines: list[ParsedLine]) -> str:
-    """Format parsed lines as transcript text with timestamps."""
-    return "\n".join(f"{seconds_to_timestamp(ln.seconds)} {ln.text}" for ln in lines)
+def _format_slice_for_prompt(lines: list[ParsedLine], use_line_numbers: bool = False) -> str:
+    """Format parsed lines for LLM: with timestamps or with 1-based line numbers."""
+    if use_line_numbers:
+        return "\n".join(f"{i} {ln.text}" for i, ln in enumerate(lines, start=1))
+    return "\n".join(
+        f"{seconds_to_timestamp(ln.seconds)} {ln.text}" for ln in lines if ln.seconds is not None
+    )
 
 
 def _call_llm_for_slice(
@@ -62,6 +69,28 @@ def _parse_timestamps_from_response(content: str) -> list[int]:
     return sorted(seconds_list)
 
 
+def _parse_line_numbers_from_response(content: str) -> list[int]:
+    """Extract line numbers (1-based) from model output. Returns sorted unique integers."""
+    seen: set[int] = set()
+    numbers: list[int] = []
+    for line in content.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        parts = line.split()
+        for part in parts:
+            part = part.rstrip(".,)")
+            try:
+                n = int(part)
+                if n >= 1 and n not in seen:
+                    seen.add(n)
+                    numbers.append(n)
+            except ValueError:
+                pass
+            break
+    return sorted(numbers)
+
+
 def _merge_boundaries(boundary_seconds: list[int]) -> list[int]:
     """Sort, dedupe, and merge boundaries within BOUNDARY_MERGE_WINDOW_SEC."""
     if not boundary_seconds:
@@ -92,46 +121,99 @@ def _apply_min_segment_duration(
 def _build_segments(
     lines: list[ParsedLine],
     boundaries_sec: list[int],
+    has_timestamps: bool,
 ) -> list[Segment]:
-    """Build segments from consecutive boundary pairs. Boundaries must include start and end of transcript."""
+    """Build segments from consecutive boundary pairs (time-based). Boundaries must include start and end."""
     if not boundaries_sec or len(boundaries_sec) < 2:
-        # Fallback: one segment = whole transcript
         if not lines:
             return []
-        start = lines[0].seconds
-        end = lines[-1].seconds
         text = " ".join(ln.text for ln in lines)
-        return [
-            Segment(
-                start_sec=start,
-                end_sec=end,
-                text=text,
-                start_ts=seconds_to_timestamp(start),
-                end_ts=seconds_to_timestamp(end),
-            )
-        ]
+        if has_timestamps and lines[0].seconds is not None and lines[-1].seconds is not None:
+            start = lines[0].seconds
+            end = lines[-1].seconds
+            return [
+                Segment(
+                    text=text,
+                    start_sec=start,
+                    end_sec=end,
+                    start_ts=seconds_to_timestamp(start),
+                    end_ts=seconds_to_timestamp(end),
+                )
+            ]
+        return [Segment(text=text)]
 
     segments: list[Segment] = []
     for i in range(len(boundaries_sec) - 1):
         t_start, t_end = boundaries_sec[i], boundaries_sec[i + 1]
         is_last = i == len(boundaries_sec) - 2
         if is_last:
-            chunk = [ln for ln in lines if t_start <= ln.seconds <= t_end]
+            chunk = [ln for ln in lines if ln.seconds is not None and t_start <= ln.seconds <= t_end]
         else:
-            chunk = [ln for ln in lines if t_start <= ln.seconds < t_end]
+            chunk = [ln for ln in lines if ln.seconds is not None and t_start <= ln.seconds < t_end]
         if not chunk:
             continue
         text = " ".join(ln.text for ln in chunk)
         segments.append(
             Segment(
+                text=text,
                 start_sec=t_start,
                 end_sec=t_end,
-                text=text,
                 start_ts=seconds_to_timestamp(t_start),
                 end_ts=seconds_to_timestamp(t_end),
             )
         )
     return segments
+
+
+def _apply_min_lines_per_segment(
+    boundary_indices: list[int],
+    total_lines: int,
+    min_lines: int = MIN_LINES_PER_SEGMENT,
+) -> list[int]:
+    """Drop boundaries that would create a segment with fewer than min_lines lines."""
+    if not boundary_indices or len(boundary_indices) < 3:
+        return boundary_indices
+    kept = [boundary_indices[0]]
+    for b in boundary_indices[1:-1]:
+        if b - kept[-1] >= min_lines:
+            kept.append(b)
+    kept.append(boundary_indices[-1])
+    return kept
+
+
+def _build_segments_from_line_boundaries(
+    lines: list[ParsedLine],
+    boundary_indices_0based: list[int],
+) -> list[Segment]:
+    """Build segments from line-number boundaries (no timestamps in output)."""
+    if not boundary_indices_0based or len(boundary_indices_0based) < 2:
+        if not lines:
+            return []
+        return [Segment(text=" ".join(ln.text for ln in lines))]
+
+    segments: list[Segment] = []
+    for i in range(len(boundary_indices_0based) - 1):
+        start_idx = boundary_indices_0based[i]
+        end_idx = boundary_indices_0based[i + 1]
+        chunk = lines[start_idx:end_idx]
+        if not chunk:
+            continue
+        text = " ".join(ln.text for ln in chunk)
+        segments.append(Segment(text=text))
+    return segments
+
+
+def _slice_start_indices(lines: list[ParsedLine], slices: list[list[ParsedLine]]) -> list[int]:
+    """Return the global 0-based line index of the first line of each slice."""
+    indices: list[int] = []
+    for s in slices:
+        if not s:
+            indices.append(0)
+            continue
+        # Find first occurrence of s[0] in lines (by identity)
+        idx = next((i for i, ln in enumerate(lines) if ln is s[0]), 0)
+        indices.append(idx)
+    return indices
 
 
 def run_stage2(
@@ -143,23 +225,40 @@ def run_stage2(
 ) -> list[Segment]:
     """
     Run Stage 2: call LLM for each slice (in parallel if multiple), merge boundaries, build segments.
-    If topics is provided, the boundary prompt is constrained to those topics; otherwise uses fallback prompt.
+    If input has timestamps, uses timestamp-based boundaries and output includes timestamps.
+    If input has no timestamps, uses line-number boundaries and output has no timestamps.
     """
-    client = OpenAI(api_key=api_key)  # None => env OPENAI_API_KEY
+    if not lines:
+        return []
 
+    client = OpenAI(api_key=api_key)  # None => env OPENAI_API_KEY
+    has_timestamps = all(ln.seconds is not None for ln in lines)
+
+    if has_timestamps:
+        return _run_stage2_timestamped(client, lines, slices, model, topics)
+    return _run_stage2_line_numbers(client, lines, slices, model, topics)
+
+
+def _run_stage2_timestamped(
+    client: OpenAI,
+    lines: list[ParsedLine],
+    slices: list[list[ParsedLine]],
+    model: str,
+    topics: list[str] | None,
+) -> list[Segment]:
+    """Timestamp-based boundary detection (original flow)."""
     system_prompt = (
         prompts_config.boundary_prompt_with_topics(topics)
         if topics
         else prompts_config.BOUNDARY_PROMPT_MAJOR_SECTION
     )
 
-    # Collect boundary seconds from each slice
     if len(slices) == 1:
-        slice_text = _format_slice_for_prompt(slices[0])
+        slice_text = _format_slice_for_prompt(slices[0], use_line_numbers=False)
         content = _call_llm_for_slice(client, slice_text, model, system_prompt)
         all_seconds = _parse_timestamps_from_response(content)
     else:
-        slice_texts = [_format_slice_for_prompt(s) for s in slices]
+        slice_texts = [_format_slice_for_prompt(s, use_line_numbers=False) for s in slices]
         all_seconds = []
         workers = min(MAX_CONCURRENT_REQUESTS, len(slices))
         with ThreadPoolExecutor(max_workers=workers) as executor:
@@ -176,11 +275,8 @@ def run_stage2(
                 except Exception as e:
                     logger.warning("LLM call failed for slice %s: %s", futures[future], e)
 
-    # Normalize boundaries: prepend start, append end, merge nearby
-    if not lines:
-        return []
-    t_start = lines[0].seconds
-    t_end = lines[-1].seconds
+    t_start = lines[0].seconds if lines[0].seconds is not None else 0
+    t_end = lines[-1].seconds if lines[-1].seconds is not None else 0
     boundaries = _merge_boundaries(all_seconds)
     if boundaries and boundaries[0] != t_start:
         boundaries.insert(0, t_start)
@@ -190,4 +286,56 @@ def run_stage2(
         boundaries = [t_start, t_end]
 
     boundaries = _apply_min_segment_duration(boundaries)
-    return _build_segments(lines, boundaries)
+    return _build_segments(lines, boundaries, has_timestamps=True)
+
+
+def _run_stage2_line_numbers(
+    client: OpenAI,
+    lines: list[ParsedLine],
+    slices: list[list[ParsedLine]],
+    model: str,
+    topics: list[str] | None,
+) -> list[Segment]:
+    """Line-number-based boundary detection when transcript has no timestamps."""
+    system_prompt = (
+        prompts_config.boundary_prompt_line_numbers_with_topics(topics)
+        if topics
+        else prompts_config.BOUNDARY_PROMPT_LINE_NUMBERS
+    )
+
+    start_indices = _slice_start_indices(lines, slices)
+
+    if len(slices) == 1:
+        slice_text = _format_slice_for_prompt(slices[0], use_line_numbers=True)
+        content = _call_llm_for_slice(client, slice_text, model, system_prompt)
+        line_nums = _parse_line_numbers_from_response(content)
+        global_indices = [start_indices[0] + (n - 1) for n in line_nums]
+    else:
+        slice_texts = [_format_slice_for_prompt(s, use_line_numbers=True) for s in slices]
+        all_global_indices: list[int] = []
+        workers = min(MAX_CONCURRENT_REQUESTS, len(slices))
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = {
+                executor.submit(
+                    _call_llm_for_slice, client, st, model, system_prompt
+                ): i
+                for i, st in enumerate(slice_texts)
+            }
+            for future in as_completed(futures):
+                try:
+                    idx = futures[future]
+                    content = future.result()
+                    line_nums = _parse_line_numbers_from_response(content)
+                    base = start_indices[idx]
+                    all_global_indices.extend(base + (n - 1) for n in line_nums)
+                except Exception as e:
+                    logger.warning("LLM call failed for slice %s: %s", futures[future], e)
+        global_indices = sorted(set(all_global_indices))
+
+    # Ensure first and last boundaries
+    n_lines = len(lines)
+    boundaries = [0] + [i for i in global_indices if 0 < i < n_lines] + [n_lines]
+    boundaries = sorted(set(boundaries))
+    # Merge boundaries that are too close (min lines per segment)
+    boundaries = _apply_min_lines_per_segment(boundaries, n_lines)
+    return _build_segments_from_line_boundaries(lines, boundaries)

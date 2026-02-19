@@ -4,16 +4,16 @@ from dataclasses import dataclass
 
 @dataclass
 class ParsedLine:
-    """A single timestamped line from the transcript."""
-    seconds: int
+    """A single line from the transcript. seconds is None when input has no timestamps."""
     text: str
+    seconds: int | None = None  # None = plain transcript, no timestamp
 
 
 @dataclass
 class Segment:
     """A contiguous segment of the transcript between two boundaries."""
-    start_sec: int
-    end_sec: int
     text: str
-    start_ts: str = ""  # human-readable e.g. "1:23:45"
+    start_sec: int | None = None
+    end_sec: int | None = None
+    start_ts: str = ""
     end_ts: str = ""

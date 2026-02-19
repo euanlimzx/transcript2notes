@@ -17,8 +17,10 @@ MAX_CONCURRENT_TOPIC_REQUESTS = 5
 
 
 def _format_lines_for_prompt(lines: list[ParsedLine]) -> str:
-    """Format parsed lines as timestamped transcript text."""
-    return "\n".join(f"{seconds_to_timestamp(ln.seconds)} {ln.text}" for ln in lines)
+    """Format parsed lines for LLM: with timestamps if present, otherwise with 1-based line numbers."""
+    if all(ln.seconds is not None for ln in lines):
+        return "\n".join(f"{seconds_to_timestamp(ln.seconds)} {ln.text}" for ln in lines)
+    return "\n".join(f"{i} {ln.text}" for i, ln in enumerate(lines, start=1))
 
 
 def _parse_topic_list(content: str) -> list[str]:
