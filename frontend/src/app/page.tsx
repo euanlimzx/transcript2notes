@@ -8,35 +8,72 @@ import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-const STORAGE_KEY = "transcript2notes_output";
+const RUNS_STORAGE_KEY = "transcript2notes_runs";
+const LEGACY_STORAGE_KEY = "transcript2notes_output";
+
+type Run = { id: string; createdAt: string; markdown: string };
 
 function splitMarkdownSections(markdown: string): string[] {
   return markdown.split(/\n(?=## )/).filter(Boolean);
 }
 
-function loadFromStorage(): string | null {
-  if (typeof window === "undefined") return null;
+function loadRuns(): Run[] {
+  if (typeof window === "undefined") return [];
   try {
-    return window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(RUNS_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as unknown;
+      if (Array.isArray(parsed)) {
+        const runs = parsed.filter(
+          (r): r is Run =>
+            r != null &&
+            typeof r === "object" &&
+            typeof (r as Run).id === "string" &&
+            typeof (r as Run).createdAt === "string" &&
+            typeof (r as Run).markdown === "string"
+        );
+        return runs;
+      }
+    }
+    const legacy = window.localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (legacy != null && legacy.trim() !== "") {
+      const run: Run = {
+        id: crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+        markdown: legacy,
+      };
+      window.localStorage.setItem(RUNS_STORAGE_KEY, JSON.stringify([run]));
+      return [run];
+    }
+    return [];
   } catch {
-    return null;
+    return [];
   }
 }
 
-function saveToStorage(markdown: string) {
+function saveRuns(runs: Run[]) {
   try {
-    window.localStorage.setItem(STORAGE_KEY, markdown);
+    window.localStorage.setItem(RUNS_STORAGE_KEY, JSON.stringify(runs));
   } catch {
     // ignore quota or privacy errors
   }
 }
 
-function clearStorage() {
-  try {
-    window.localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    // ignore
-  }
+function addRun(markdown: string, currentRuns: Run[]): Run {
+  const run: Run = {
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+    markdown,
+  };
+  const next = [run, ...currentRuns];
+  saveRuns(next);
+  return run;
+}
+
+function deleteRunById(id: string, runs: Run[]): Run[] {
+  const next = runs.filter((r) => r.id !== id);
+  saveRuns(next);
+  return next;
 }
 
 export default function Home() {
@@ -44,10 +81,16 @@ export default function Home() {
   const [markdown, setMarkdown] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [runs, setRuns] = useState<Run[]>([]);
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
 
   useEffect(() => {
-    const saved = loadFromStorage();
-    if (saved) setMarkdown(saved);
+    const loaded = loadRuns();
+    setRuns(loaded);
+    if (loaded.length > 0) {
+      setMarkdown(loaded[0].markdown);
+      setSelectedRunId(loaded[0].id);
+    }
   }, []);
 
   async function handleConvert() {
@@ -72,11 +115,30 @@ export default function Home() {
       }
       const result = data.markdown ?? "";
       setMarkdown(result);
-      saveToStorage(result);
+      setRuns((prev) => {
+        const newRun = addRun(result, prev);
+        setSelectedRunId(newRun.id);
+        return [newRun, ...prev];
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Conversion failed.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  function handleSelectRun(run: Run) {
+    setMarkdown(run.markdown);
+    setSelectedRunId(run.id);
+  }
+
+  function handleDeleteRun(id: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    const next = deleteRunById(id, runs);
+    setRuns(next);
+    if (selectedRunId === id) {
+      setMarkdown(next.length > 0 ? next[0].markdown : null);
+      setSelectedRunId(next.length > 0 ? next[0].id : null);
     }
   }
 
@@ -121,21 +183,39 @@ export default function Home() {
           </p>
         )}
 
+        {runs.length > 0 && (
+          <div className="mt-8">
+            <h2 className="text-lg font-medium mb-3">Past transcriptions</h2>
+            <ul className="space-y-1 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 overflow-hidden">
+              {runs.map((run) => (
+                <li
+                  key={run.id}
+                  className={`flex items-center justify-between gap-2 px-3 py-2 cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 ${selectedRunId === run.id ? "bg-zinc-100 dark:bg-zinc-800" : ""}`}
+                  onClick={() => handleSelectRun(run)}
+                >
+                  <span className="text-sm">
+                    {new Date(run.createdAt).toLocaleDateString(undefined, {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => handleDeleteRun(run.id, e)}
+                    className="text-xs px-2 py-1 rounded border border-zinc-300 dark:border-zinc-600 hover:bg-red-50 dark:hover:bg-red-950 hover:border-red-300 dark:hover:border-red-800 text-red-600 dark:text-red-400"
+                  >
+                    Delete
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {sections.length > 0 && (
           <div className="mt-8">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-medium">Notes</h2>
-              <button
-                type="button"
-                onClick={() => {
-                  clearStorage();
-                  setMarkdown(null);
-                }}
-                className="text-xs text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
-              >
-                Clear saved output
-              </button>
-            </div>
+            <h2 className="text-lg font-medium mb-4">Notes</h2>
             <div className="space-y-6">
               {sections.map((section, i) => (
                 <section
