@@ -7,7 +7,6 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const RUNS_STORAGE_KEY = "transcript2notes_runs";
 const LEGACY_STORAGE_KEY = "transcript2notes_output";
 
@@ -30,7 +29,7 @@ function loadRuns(): Run[] {
             typeof r === "object" &&
             typeof (r as Run).id === "string" &&
             typeof (r as Run).createdAt === "string" &&
-            typeof (r as Run).markdown === "string"
+            typeof (r as Run).markdown === "string",
         );
         return runs;
       }
@@ -103,7 +102,7 @@ export default function Home() {
     setLoading(true);
     setMarkdown(null);
     try {
-      const res = await fetch(`${API_URL}/convert`, {
+      const res = await fetch("/api/convert", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ transcript: text }),
@@ -178,7 +177,10 @@ export default function Home() {
         </button>
 
         {error && (
-          <p className="mt-4 text-sm text-red-600 dark:text-red-400" role="alert">
+          <p
+            className="mt-4 text-sm text-red-600 dark:text-red-400"
+            role="alert"
+          >
             {error}
           </p>
         )}

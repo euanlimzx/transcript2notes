@@ -1,2 +1,22 @@
 .env
+.env*
 __pycache__
+
+# dependencies
+node_modules
+/.pnp
+.pnp.*
+
+# next.js
+.next/
+out/
+
+# production
+/build
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts

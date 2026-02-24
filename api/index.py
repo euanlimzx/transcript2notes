@@ -1,4 +1,4 @@
-"""FastAPI app: POST /convert accepts transcript, returns markdown notes."""
+"""Vercel serverless entry: FastAPI app for POST /api/convert."""
 import os
 
 from dotenv import load_dotenv
@@ -41,13 +41,13 @@ def _convert_impl(request: ConvertRequest) -> ConvertResponse:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/convert", response_model=ConvertResponse)
-def convert(request: ConvertRequest) -> ConvertResponse:
-    """Convert transcript text to markdown notes."""
+@app.post("/api/convert", response_model=ConvertResponse)
+def convert_api(request: ConvertRequest) -> ConvertResponse:
+    """Convert transcript text to markdown notes (full path for Vercel)."""
     return _convert_impl(request)
 
 
-@app.post("/api/convert", response_model=ConvertResponse)
-def convert_api(request: ConvertRequest) -> ConvertResponse:
-    """Same as /convert; used when Next rewrites /api/* to this server in dev."""
+@app.post("/convert", response_model=ConvertResponse)
+def convert(request: ConvertRequest) -> ConvertResponse:
+    """Same handler if Vercel strips /api prefix."""
     return _convert_impl(request)
