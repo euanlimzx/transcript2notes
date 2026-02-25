@@ -1,106 +1,67 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
+import { supabase } from "@/lib/supabase";
 
-const RUNS_STORAGE_KEY = "transcript2notes_runs";
-const LEGACY_STORAGE_KEY = "transcript2notes_output";
-
-type Run = { id: string; createdAt: string; markdown: string };
+type Conversion = {
+  id: string;
+  status: "pending" | "completed" | "failed";
+  markdown: string | null;
+  error: string | null;
+  created_at: string;
+};
 
 function splitMarkdownSections(markdown: string): string[] {
   return markdown.split(/\n(?=## )/).filter(Boolean);
 }
 
-function loadRuns(): Run[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(RUNS_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as unknown;
-      if (Array.isArray(parsed)) {
-        const runs = parsed.filter(
-          (r): r is Run =>
-            r != null &&
-            typeof r === "object" &&
-            typeof (r as Run).id === "string" &&
-            typeof (r as Run).createdAt === "string" &&
-            typeof (r as Run).markdown === "string",
-        );
-        return runs;
-      }
-    }
-    const legacy = window.localStorage.getItem(LEGACY_STORAGE_KEY);
-    if (legacy != null && legacy.trim() !== "") {
-      const run: Run = {
-        id: crypto.randomUUID(),
-        createdAt: new Date().toISOString(),
-        markdown: legacy,
-      };
-      window.localStorage.setItem(RUNS_STORAGE_KEY, JSON.stringify([run]));
-      return [run];
-    }
-    return [];
-  } catch {
-    return [];
-  }
-}
-
-function saveRuns(runs: Run[]) {
-  try {
-    window.localStorage.setItem(RUNS_STORAGE_KEY, JSON.stringify(runs));
-  } catch {
-    // ignore quota or privacy errors
-  }
-}
-
-function addRun(markdown: string, currentRuns: Run[]): Run {
-  const run: Run = {
-    id: crypto.randomUUID(),
-    createdAt: new Date().toISOString(),
-    markdown,
-  };
-  const next = [run, ...currentRuns];
-  saveRuns(next);
-  return run;
-}
-
-function deleteRunById(id: string, runs: Run[]): Run[] {
-  const next = runs.filter((r) => r.id !== id);
-  saveRuns(next);
-  return next;
-}
-
 export default function Home() {
   const [transcript, setTranscript] = useState("");
-  const [markdown, setMarkdown] = useState<string | null>(null);
+  const [conversions, setConversions] = useState<Conversion[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [runs, setRuns] = useState<Run[]>([]);
-  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  const fetchConversions = useCallback(async () => {
+    setFetchError(null);
+    const { data, error } = await supabase
+      .from("conversions")
+      .select("id, status, markdown, error, created_at")
+      .order("created_at", { ascending: false });
+    if (error) {
+      setFetchError(error.message);
+      return;
+    }
+    const rows = (data ?? []) as Conversion[];
+    setConversions(rows);
+    setSelectedId((prev) => (prev && rows.some((r) => r.id === prev)) ? prev : rows[0]?.id ?? null);
+  }, []);
 
   useEffect(() => {
-    const loaded = loadRuns();
-    setRuns(loaded);
-    if (loaded.length > 0) {
-      setMarkdown(loaded[0].markdown);
-      setSelectedRunId(loaded[0].id);
-    }
+    fetchConversions();
   }, []);
+
+  const selected = conversions.find((c) => c.id === selectedId);
+  const markdown =
+    selected?.status === "completed" && selected?.markdown
+      ? selected.markdown
+      : null;
+  const sections = markdown ? splitMarkdownSections(markdown) : [];
 
   async function handleConvert() {
     const text = transcript.trim();
     if (!text) {
-      setError("Please paste a transcript first.");
+      setSubmitError("Please paste a transcript first.");
       return;
     }
-    setError(null);
+    setSubmitError(null);
     setLoading(true);
-    setMarkdown(null);
     try {
       const res = await fetch("/api/convert", {
         method: "POST",
@@ -109,35 +70,37 @@ export default function Home() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.detail ?? "Conversion failed.");
+        setSubmitError(data.detail ?? "Conversion failed.");
         return;
       }
-      const result = data.markdown ?? "";
-      setMarkdown(result);
-      setRuns((prev) => {
-        const newRun = addRun(result, prev);
-        setSelectedRunId(newRun.id);
-        return [newRun, ...prev];
-      });
+      const jobId = data.jobId as string | undefined;
+      if (jobId) {
+        await fetchConversions();
+        setSelectedId(jobId);
+      }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Conversion failed.");
+      setSubmitError(e instanceof Error ? e.message : "Conversion failed.");
     } finally {
       setLoading(false);
     }
   }
 
-  function handleSelectRun(run: Run) {
-    setMarkdown(run.markdown);
-    setSelectedRunId(run.id);
+  function handleSelectConversion(c: Conversion) {
+    setSelectedId(c.id);
   }
 
-  function handleDeleteRun(id: string, e: React.MouseEvent) {
+  async function handleDeleteConversion(id: string, e: React.MouseEvent) {
     e.stopPropagation();
-    const next = deleteRunById(id, runs);
-    setRuns(next);
-    if (selectedRunId === id) {
-      setMarkdown(next.length > 0 ? next[0].markdown : null);
-      setSelectedRunId(next.length > 0 ? next[0].id : null);
+    try {
+      const res = await fetch(`/api/conversions/${id}`, { method: "DELETE" });
+      if (!res.ok) return;
+      await fetchConversions();
+      if (selectedId === id) {
+        const remaining = conversions.filter((c) => c.id !== id);
+        setSelectedId(remaining.length > 0 ? remaining[0].id : null);
+      }
+    } catch {
+      // ignore
     }
   }
 
@@ -148,8 +111,6 @@ export default function Home() {
       // ignore
     }
   }
-
-  const sections = markdown ? splitMarkdownSections(markdown) : [];
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
@@ -173,38 +134,49 @@ export default function Home() {
           disabled={loading}
           className="mt-4 px-4 py-2 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-zinc-800 dark:hover:bg-zinc-200"
         >
-          {loading ? "Converting…" : "Convert"}
+          {loading ? "Submitting…" : "Convert"}
         </button>
 
-        {error && (
+        {submitError && (
           <p
             className="mt-4 text-sm text-red-600 dark:text-red-400"
             role="alert"
           >
-            {error}
+            {submitError}
           </p>
         )}
 
-        {runs.length > 0 && (
+        {fetchError && (
+          <p
+            className="mt-4 text-sm text-amber-600 dark:text-amber-400"
+            role="alert"
+          >
+            Could not load conversions: {fetchError}
+          </p>
+        )}
+
+        {conversions.length > 0 && (
           <div className="mt-8">
-            <h2 className="text-lg font-medium mb-3">Past transcriptions</h2>
+            <h2 className="text-lg font-medium mb-3">Conversions</h2>
             <ul className="space-y-1 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 overflow-hidden">
-              {runs.map((run) => (
+              {conversions.map((c) => (
                 <li
-                  key={run.id}
-                  className={`flex items-center justify-between gap-2 px-3 py-2 cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 ${selectedRunId === run.id ? "bg-zinc-100 dark:bg-zinc-800" : ""}`}
-                  onClick={() => handleSelectRun(run)}
+                  key={c.id}
+                  className={`flex items-center justify-between gap-2 px-3 py-2 cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 ${selectedId === c.id ? "bg-zinc-100 dark:bg-zinc-800" : ""}`}
+                  onClick={() => handleSelectConversion(c)}
                 >
                   <span className="text-sm">
-                    {new Date(run.createdAt).toLocaleDateString(undefined, {
+                    {new Date(c.created_at).toLocaleDateString(undefined, {
                       day: "numeric",
                       month: "short",
                       year: "numeric",
                     })}
+                    {c.status === "pending" && " — Converting…"}
+                    {c.status === "failed" && " — Failed"}
                   </span>
                   <button
                     type="button"
-                    onClick={(e) => handleDeleteRun(run.id, e)}
+                    onClick={(e) => handleDeleteConversion(c.id, e)}
                     className="text-xs px-2 py-1 rounded border border-zinc-300 dark:border-zinc-600 hover:bg-red-50 dark:hover:bg-red-950 hover:border-red-300 dark:hover:border-red-800 text-red-600 dark:text-red-400"
                   >
                     Delete
@@ -213,6 +185,21 @@ export default function Home() {
               ))}
             </ul>
           </div>
+        )}
+
+        {selected?.status === "pending" && (
+          <p className="mt-6 text-sm text-zinc-500 dark:text-zinc-400">
+            Conversion in progress. Refresh the page in a few minutes to see the result.
+          </p>
+        )}
+
+        {selected?.status === "failed" && selected?.error && (
+          <p
+            className="mt-6 text-sm text-red-600 dark:text-red-400"
+            role="alert"
+          >
+            {selected.error}
+          </p>
         )}
 
         {sections.length > 0 && (

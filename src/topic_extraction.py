@@ -47,6 +47,7 @@ def _extract_topics_full(transcript_text: str, model: str, api_key: str | None) 
         transcript_text,
         model,
         api_key=api_key,
+        label="topic_full",
     )
     return _parse_topic_list(raw)
 
@@ -58,6 +59,7 @@ def _extract_topics_chunk(chunk_text: str, model: str, api_key: str | None) -> l
         chunk_text,
         model,
         api_key=api_key,
+        label="topic_chunk",
     )
     return _parse_topic_list(raw)
 
@@ -78,6 +80,7 @@ def _merge_topic_lists(
         formatted,
         model,
         api_key=api_key,
+        label="topic_merge",
     )
     return _parse_topic_list(raw)
 

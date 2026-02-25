@@ -22,6 +22,7 @@ def _call_llm_for_segment(
         segment_text,
         model,
         api_key=api_key,
+        label="notes",
     )
 
 

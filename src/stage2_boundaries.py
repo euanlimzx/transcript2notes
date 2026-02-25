@@ -38,7 +38,7 @@ def _call_llm_for_slice(
     api_key: str | None,
 ) -> str:
     """Single LLM call for one slice. Returns raw response content."""
-    return complete(system_prompt, slice_text, model, api_key=api_key)
+    return complete(system_prompt, slice_text, model, api_key=api_key, label="boundaries")
 
 
 def _parse_timestamps_from_response(content: str) -> list[int]:

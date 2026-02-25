@@ -1,0 +1,7 @@
+{"sessionId":"4ffa54","location":"app/page.tsx:handleConvert","message":"fetch /api/convert starting","data":{"transcriptLen":4},"hypothesisId":"A","timestamp":1771992062449}
+{"sessionId": "4ffa54", "location": "api.py", "message": "convert_api request received", "data": {"body_len": 4}, "hypothesisId": "C", "timestamp": 1771992062804.274}
+{"sessionId": "4ffa54", "location": "api.py", "message": "run_pipeline starting", "data": {"transcript_len": 4}, "hypothesisId": "A", "timestamp": 1771992062804.388}
+{"sessionId": "4ffa54", "location": "pipeline.py", "message": "run_pipeline entry", "data": {"transcript_len": 4}, "hypothesisId": "A", "timestamp": 1771992062804.446}
+{"sessionId": "4ffa54", "location": "api.py", "message": "_convert_impl exception", "data": {"error": "503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}"}, "hypothesisId": "B", "timestamp": 1771992077017.8408}
+{"sessionId": "4ffa54", "location": "api.py", "message": "convert_api exception", "data": {"error": "500: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}"}, "hypothesisId": "B", "timestamp": 1771992077018.6848}
+{"sessionId":"4ffa54","runId":"post-fix","location":"app/api/convert/route.ts","message":"proxy response","data":{"status":500,"ok":false},"timestamp":1771992077026}
