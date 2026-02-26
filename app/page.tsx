@@ -155,9 +155,22 @@ export default function Home() {
           </p>
         )}
 
-        {conversions.length > 0 && (
-          <div className="mt-8">
-            <h2 className="text-lg font-medium mb-3">Conversions</h2>
+        <div className="mt-8">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <h2 className="text-lg font-medium">Past transcriptions</h2>
+            <button
+              type="button"
+              onClick={() => fetchConversions()}
+              className="text-sm px-2 py-1 rounded border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >
+              Refresh
+            </button>
+          </div>
+          {conversions.length === 0 ? (
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 py-4 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3">
+              No conversions yet. Paste a transcript above and click Convert; your notes will appear here. Refresh to see completed jobs.
+            </p>
+          ) : (
             <ul className="space-y-1 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 overflow-hidden">
               {conversions.map((c) => (
                 <li
@@ -173,6 +186,7 @@ export default function Home() {
                     })}
                     {c.status === "pending" && " — Converting…"}
                     {c.status === "failed" && " — Failed"}
+                    {c.status === "completed" && " — Notes ready"}
                   </span>
                   <button
                     type="button"
@@ -184,8 +198,13 @@ export default function Home() {
                 </li>
               ))}
             </ul>
-          </div>
-        )}
+          )}
+          {conversions.length > 0 && (
+            <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+              Click a row to view its notes below.
+            </p>
+          )}
+        </div>
 
         {selected?.status === "pending" && (
           <p className="mt-6 text-sm text-zinc-500 dark:text-zinc-400">
