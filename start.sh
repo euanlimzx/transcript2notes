@@ -1,49 +1,56 @@
 #!/bin/bash
 set -e
 
-echo "🚀 Setting up Transcript2Notes..."
+# Run from repo root (directory containing this script)
+cd "$(dirname "$0")"
+ROOT="$(pwd)"
 
-# Check if Python venv exists, create if not
+echo "🚀 Transcript2Notes – local setup"
+echo ""
+
+# --- Python backend ---
 if [ ! -d ".venv" ]; then
     echo "📦 Creating Python virtual environment..."
     python3 -m venv .venv
 fi
 
-# Activate venv
-echo "🔌 Activating Python virtual environment..."
-source .venv/bin/activate
+echo "🔌 Activating virtual environment..."
+# shellcheck source=/dev/null
+source "$ROOT/.venv/bin/activate"
 
-# Install Python dependencies
 echo "📥 Installing Python dependencies..."
 pip install -q -r requirements.txt
 
-# Install Node dependencies if node_modules doesn't exist
+# --- Node frontend ---
 if [ ! -d "node_modules" ]; then
     echo "📥 Installing Node dependencies..."
     npm install
 fi
 
-# Check if .env exists
 if [ ! -f ".env" ]; then
-    echo "⚠️  Warning: .env file not found. Copy .env.example to .env and set GEMINI_API_KEY"
+    echo "⚠️  No .env found. Copy .env.example to .env and set GEMINI_API_KEY (and Supabase keys if needed)."
 fi
 
-echo "✅ Setup complete!"
 echo ""
-echo "🌐 Starting servers..."
-echo "   - Next.js: http://localhost:3000"
-echo "   - Python API: http://localhost:5328"
+echo "✅ Setup complete"
+echo "   Frontend (Next.js): http://localhost:3000"
+echo "   Backend (FastAPI):  http://127.0.0.1:5328"
 echo ""
 
-# Ensure concurrently is installed
-if ! npm list concurrently &> /dev/null; then
+# Use venv’s uvicorn so the API always runs with the venv (concurrently subprocesses don’t inherit activation)
+UVICORN="$ROOT/.venv/bin/uvicorn"
+if [ ! -x "$UVICORN" ]; then
+    echo "❌ Missing or not executable: $UVICORN"
+    exit 1
+fi
+
+if ! npm list concurrently &>/dev/null; then
     echo "📦 Installing concurrently..."
     npm install --save-dev concurrently
 fi
 
-# Start both servers
 npx concurrently \
-    --names "NEXT,API" \
+    --names "next,api" \
     --prefix-colors "cyan,yellow" \
     "npm run dev" \
-    "npm run dev:api"
+    "$UVICORN api:app --reload --port 5328"

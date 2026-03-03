@@ -1,5 +1,5 @@
 /** Proxies POST /api/convert to the Python backend. Backend returns 202 + jobId immediately; conversion runs in background. */
-const BACKEND = "http://127.0.0.1:5328";
+const BACKEND = process.env.BACKEND_URL ?? "http://127.0.0.1:5328";
 const PROXY_TIMEOUT_MS = 15_000; // 15 s — we only wait for insert + job id
 
 export async function POST(request: Request) {

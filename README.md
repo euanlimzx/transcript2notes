@@ -1,6 +1,6 @@
 # Transcript to Notes
 
-Pipeline: parse transcript (Stage 1), detect topic boundaries (Stage 2), then turn each segment into markdown study notes (Stage 3). Single deployment: Next.js app and Python API run from the same repo root; one Vercel project serves both.
+Pipeline: parse transcript (Stage 1), detect topic boundaries (Stage 2), then turn each segment into markdown study notes (Stage 3). Deploy as separate frontend (Vercel) and backend (your server); see [DEPLOY.md](DEPLOY.md).
 
 ## Quick Start (One Command)
 
@@ -77,18 +77,9 @@ vercel dev
 
 Runs both Next.js and the Python API under one process.
 
-## Deploy (Vercel)
+## Deploy
 
-One deployment serves both the Next.js app and the Python API:
-
-- **Root:** Next.js (`app/`, `next.config.ts`, `package.json`) and Python (`api/`, `src/`, `requirements.txt`).
-- **API:** `api/index.py` is the serverless FastAPI entry; all `/api/*` requests are handled by it (see `vercel.json`).
-
-1. Push to GitHub and import the repo as a Vercel project (or use the Vercel CLI).
-2. Set **Environment Variables** in the Vercel project: `GEMINI_API_KEY` (and optionally `CORS_ORIGINS`).
-3. **Function timeout:** The pipeline can run 60s+ for long transcripts. In Vercel, `api/index.py` is set to `maxDuration: 300` in `vercel.json` (Pro/Enterprise; Hobby is limited to 60s). If you hit timeouts, consider upgrading or chunking in a future iteration.
-
-No need to set `NEXT_PUBLIC_API_URL` for production; the app uses relative `/api/convert`.
+**Separate deployments:** Next.js on Vercel, FastAPI on your own server (e.g. Render). Set `BACKEND_URL` on Vercel to your backend URL. Full steps and env vars: [DEPLOY.md](DEPLOY.md).
 
 ## CLI pipeline (no server)
 
