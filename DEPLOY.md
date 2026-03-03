@@ -29,7 +29,7 @@ Deploy the same repo (or the backend parts) to Render, Railway, or any host that
 
 Optional: `CORS_ORIGINS` (only needed if the browser will call the API directly; with the proxy setup you don’t need it).
 
-**Health check (optional):** Add a `GET /` or `GET /health` in [api.py](api.py) and set that path as the health check in your host so the service stays up.
+**Health check (recommended on Render):** The backend includes `GET /health` (and `GET /api/health`). Use `/health` as the Render health check, and the frontend has `/api/health` for a “Wake server” button.
 
 ## 3. Local development
 

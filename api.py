@@ -2,6 +2,7 @@
 import logging
 import os
 import threading
+import time
 import uuid
 
 from dotenv import load_dotenv
@@ -9,13 +10,12 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from src.pipeline import run_pipeline
-
 load_dotenv()
 
 logger = logging.getLogger("uvicorn")
 
 app = FastAPI(title="Transcript2Notes API")
+_STARTED_AT = time.time()
 
 allow_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000").strip().split(",")
 app.add_middleware(
@@ -47,6 +47,9 @@ class ConvertAcceptedResponse(BaseModel):
 
 def _run_pipeline_and_update(job_id: str, transcript: str) -> None:
     try:
+        # Lazy import so cold-start/health-check stays lightweight.
+        from src.pipeline import run_pipeline
+
         markdown = run_pipeline(transcript)
         supabase = _get_supabase()
         supabase.table("conversions").update(
@@ -62,6 +65,22 @@ def _run_pipeline_and_update(job_id: str, transcript: str) -> None:
             ).eq("id", job_id).execute()
         except Exception as update_err:
             logger.exception("Failed to update conversion %s to failed: %s", job_id, update_err)
+
+
+@app.get("/health")
+def health():
+    """Lightweight health endpoint for Render + user 'wake' button."""
+    return {
+        "ok": True,
+        "service": "transcript2notes-backend",
+        "uptime_s": round(time.time() - _STARTED_AT, 3),
+    }
+
+
+@app.get("/api/health")
+def health_api():
+    """Same as /health; convenient when clients assume /api/*."""
+    return health()
 
 
 @app.post("/convert", response_model=ConvertAcceptedResponse, status_code=202)

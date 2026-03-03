@@ -25,6 +25,12 @@ export default function Home() {
   const [conversions, setConversions] = useState<Conversion[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [waking, setWaking] = useState(false);
+  const [wakeStatus, setWakeStatus] = useState<
+    | { state: "idle" }
+    | { state: "ok"; message: string }
+    | { state: "error"; message: string }
+  >({ state: "idle" });
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
@@ -45,7 +51,7 @@ export default function Home() {
 
   useEffect(() => {
     fetchConversions();
-  }, []);
+  }, [fetchConversions]);
 
   const selected = conversions.find((c) => c.id === selectedId);
   const markdown =
@@ -82,6 +88,37 @@ export default function Home() {
       setSubmitError(e instanceof Error ? e.message : "Conversion failed.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleWake() {
+    setWakeStatus({ state: "idle" });
+    setWaking(true);
+    try {
+      const res = await fetch("/api/health", { cache: "no-store" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setWakeStatus({
+          state: "error",
+          message: (data.detail as string | undefined) ?? "Server not ready.",
+        });
+        return;
+      }
+      const uptime = typeof data.uptime_s === "number" ? data.uptime_s : null;
+      setWakeStatus({
+        state: "ok",
+        message:
+          uptime === null
+            ? "Server is awake."
+            : `Server is awake (uptime ${uptime}s).`,
+      });
+    } catch (e) {
+      setWakeStatus({
+        state: "error",
+        message: e instanceof Error ? e.message : "Health check failed.",
+      });
+    } finally {
+      setWaking(false);
     }
   }
 
@@ -136,6 +173,27 @@ export default function Home() {
         >
           {loading ? "Submitting…" : "Convert"}
         </button>
+
+        <div className="mt-3 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleWake}
+            disabled={waking || loading}
+            className="text-sm px-3 py-1.5 rounded border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {waking ? "Waking…" : "Wake server"}
+          </button>
+          {wakeStatus.state === "ok" && (
+            <span className="text-xs text-emerald-700 dark:text-emerald-400">
+              {wakeStatus.message}
+            </span>
+          )}
+          {wakeStatus.state === "error" && (
+            <span className="text-xs text-amber-700 dark:text-amber-400">
+              {wakeStatus.message}
+            </span>
+          )}
+        </div>
 
         {submitError && (
           <p
