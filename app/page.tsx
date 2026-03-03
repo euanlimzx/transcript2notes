@@ -53,6 +53,49 @@ export default function Home() {
     fetchConversions();
   }, [fetchConversions]);
 
+  const hasPending = conversions.some((c) => c.status === "pending");
+
+  // While there are pending conversions, periodically:
+  // - ping /api/health to keep the backend awake
+  // - refresh the conversions list so completed jobs show up automatically
+  useEffect(() => {
+    if (!hasPending) return;
+
+    const HEALTH_INTERVAL_MS = 30_000;
+    const REFRESH_INTERVAL_MS = 15_000;
+
+    let healthTimer: number | undefined;
+    let refreshTimer: number | undefined;
+
+    const pingHealth = async () => {
+      try {
+        await fetch("/api/health", { cache: "no-store" });
+      } catch {
+        // ignore errors; this is best-effort warming
+      }
+    };
+
+    const refresh = async () => {
+      await fetchConversions();
+    };
+
+    // Kick off immediately, then on intervals.
+    pingHealth();
+    refresh();
+
+    healthTimer = window.setInterval(pingHealth, HEALTH_INTERVAL_MS);
+    refreshTimer = window.setInterval(refresh, REFRESH_INTERVAL_MS);
+
+    return () => {
+      if (healthTimer !== undefined) {
+        window.clearInterval(healthTimer);
+      }
+      if (refreshTimer !== undefined) {
+        window.clearInterval(refreshTimer);
+      }
+    };
+  }, [hasPending, fetchConversions]);
+
   const selected = conversions.find((c) => c.id === selectedId);
   const markdown =
     selected?.status === "completed" && selected?.markdown

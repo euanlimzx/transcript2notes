@@ -4,6 +4,7 @@ import os
 import threading
 import time
 import uuid
+from datetime import datetime, timedelta, timezone
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
@@ -65,6 +66,66 @@ def _run_pipeline_and_update(job_id: str, transcript: str) -> None:
             ).eq("id", job_id).execute()
         except Exception as update_err:
             logger.exception("Failed to update conversion %s to failed: %s", job_id, update_err)
+
+
+@app.on_event("startup")
+def mark_stale_pending_conversions() -> None:
+    """
+    On backend startup, mark very old pending jobs as failed so they do not
+    appear to be 'stuck forever' in the UI.
+
+    NOTE: With the current schema we do not store the transcript in Supabase,
+    so we cannot actually re-run the pipeline after a restart; we can only
+    surface a clear failure message and ask the user to resubmit.
+    """
+    max_age_minutes_env = os.getenv("PENDING_MAX_AGE_MINUTES", "20")
+    try:
+        max_age_minutes = int(max_age_minutes_env)
+    except ValueError:
+        max_age_minutes = 20
+
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=max_age_minutes)
+
+    try:
+        supabase = _get_supabase()
+    except Exception as e:
+        logger.warning("Startup: could not create Supabase client; skipping stale pending cleanup: %s", e)
+        return
+
+    try:
+        res = (
+            supabase.table("conversions")
+            .select("id, created_at")
+            .eq("status", "pending")
+            .lt("created_at", cutoff.isoformat())
+            .execute()
+        )
+        rows = res.data or []
+    except Exception as e:
+        logger.warning("Startup: failed to query pending conversions: %s", e)
+        return
+
+    if not rows:
+        return
+
+    updated = 0
+    for row in rows:
+        job_id = row.get("id")
+        if not job_id:
+            continue
+        try:
+            supabase.table("conversions").update(
+                {
+                    "status": "failed",
+                    "error": "Backend restarted before this job finished. Please resubmit the transcript.",
+                }
+            ).eq("id", job_id).execute()
+            updated += 1
+        except Exception as e:
+            logger.warning("Startup: failed to mark conversion %s as failed: %s", job_id, e)
+
+    if updated:
+        logger.info("Startup: marked %d stale pending conversion(s) as failed", updated)
 
 
 @app.get("/health")
