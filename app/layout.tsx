@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Transcript to Notes",
-  description: "Convert lecture transcripts to markdown study notes",
+  title: "makemenotes.com",
+  description: "makemenotes.com - Turn messy lecture transcripts into organized notes",
 };
 
 export const viewport: Viewport = {

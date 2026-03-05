@@ -83,7 +83,7 @@ export default function LoginPage() {
           className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold mb-4 sm:mb-6 text-white"
           style={{ fontFamily: "Google Sans, sans-serif" }}
         >
-          Turn Messy Lecture Transcripts Into Organized Notes
+          makemenotes.com
         </h1>
         <p
           className="text-lg sm:text-xl md:text-2xl text-zinc-300 mb-8 sm:mb-14"
