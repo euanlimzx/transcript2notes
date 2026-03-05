@@ -52,7 +52,7 @@ export default function LoginPage() {
     }
     setMessage({
       type: "success",
-      text: "Done!Check your inbox for a magic link to sign in.",
+      text: "Done! Check your inbox for a magic link to sign in.",
     });
   }
 
