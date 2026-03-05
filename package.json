@@ -12,12 +12,14 @@
     "setup": "bash start.sh"
   },
   "dependencies": {
+    "@fontsource/google-sans": "^5.2.1",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.47.0",
     "@tailwindcss/typography": "^0.5.19",
     "@vercel/analytics": "^1.6.1",
     "katex": "^0.16.28",
     "next": "16.1.6",
+    "ogl": "^1.0.11",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-markdown": "^10.1.0",

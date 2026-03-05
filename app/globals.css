@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+@import "@fontsource/google-sans/400.css";
+@import "@fontsource/google-sans/600.css";
 
 :root {
   --background: #ffffff;

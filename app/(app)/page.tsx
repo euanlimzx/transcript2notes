@@ -71,7 +71,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-full px-6">
+    <div className="flex flex-col items-center justify-center min-h-full px-6 sm:px-8">
       <div className="w-full max-w-2xl flex flex-col items-center gap-6">
         <h1 className="text-2xl sm:text-3xl font-medium text-zinc-900 dark:text-white text-center">
           What are we studying today?
