@@ -1,16 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+
+const ROWS_COLLAPSED = 1;
+const ROWS_EXPANDED = 4;
 
 export default function HomePage() {
   const router = useRouter();
   const [transcript, setTranscript] = useState("");
+  const [isFocused, setIsFocused] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<
     "idle" | "connecting" | "connected" | "error"
   >("idle");
+
+  const isExpanded = isFocused || transcript.trim().length > 0;
+  const rows = isExpanded ? ROWS_EXPANDED : ROWS_COLLAPSED;
 
   useEffect(() => {
     setConnectionStatus("connecting");
@@ -22,7 +29,7 @@ export default function HomePage() {
       .catch(() => setConnectionStatus("error"));
   }, []);
 
-  async function handleConvert() {
+  const handleConvert = useCallback(async () => {
     const text = transcript.trim();
     if (!text) {
       setSubmitError("Please paste a transcript first.");
@@ -50,46 +57,64 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
+  }, [transcript, router]);
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key !== "Enter") return;
+    if (e.shiftKey) return; // Shift+Enter = newline
+    e.preventDefault();
+    handleConvert();
+  }
+
+  function handleBlur() {
+    setIsFocused(false);
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-6 py-8">
-      <h1 className="text-2xl font-semibold mb-6">Transcript to Notes</h1>
+    <div className="flex flex-col items-center justify-center min-h-full px-6">
+      <div className="w-full max-w-2xl flex flex-col items-center gap-6">
+        <h1 className="text-2xl sm:text-3xl font-medium text-zinc-900 dark:text-white text-center">
+          What are we studying today?
+        </h1>
 
-      {connectionStatus === "connecting" && (
-        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
-          Establishing connection…
-        </p>
-      )}
+        {connectionStatus === "connecting" && (
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            Establishing connection…
+          </p>
+        )}
 
-      <label className="block text-sm font-medium text-zinc-600 dark:text-zinc-400 mb-2">
-        Paste transcript
-      </label>
-      <textarea
-        className="w-full min-h-[200px] rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-500"
-        placeholder="Paste your transcript here (with or without timestamps like 0:15 ...)"
-        value={transcript}
-        onChange={(e) => setTranscript(e.target.value)}
-        disabled={loading}
-      />
-
-      <button
-        type="button"
-        onClick={handleConvert}
-        disabled={loading}
-        className="mt-4 px-4 py-2 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-zinc-800 dark:hover:bg-zinc-200"
-      >
-        {loading ? "Submitting…" : "Convert"}
-      </button>
-
-      {submitError && (
-        <p
-          className="mt-4 text-sm text-red-600 dark:text-red-400"
-          role="alert"
+        <div
+          className={`w-full relative overflow-hidden transition-[max-height] duration-300 ease-out ${isExpanded ? "max-h-40" : "max-h-14"}`}
         >
-          {submitError}
-        </p>
-      )}
+          <div
+            className={`relative flex items-end bg-zinc-100 dark:bg-zinc-800/80 transition-[border-radius] duration-300 ease-out ${
+              isExpanded ? "rounded-2xl" : "rounded-3xl"
+            }`}
+          >
+            <textarea
+              rows={rows}
+              className="w-full resize-none bg-transparent px-5 py-3.5 pr-14 text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none text-base leading-relaxed min-h-0"
+              placeholder="Paste your lecture transcript here"
+              value={transcript}
+              onChange={(e) => setTranscript(e.target.value)}
+              onFocus={() => setIsFocused(true)}
+              onBlur={handleBlur}
+              onKeyDown={handleKeyDown}
+              disabled={loading}
+              style={{ overflow: rows === 1 ? "hidden" : "auto" }}
+            />
+          </div>
+        </div>
+
+        {submitError && (
+          <p
+            className="text-sm text-red-600 dark:text-red-400 text-center"
+            role="alert"
+          >
+            {submitError}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

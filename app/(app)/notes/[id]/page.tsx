@@ -9,6 +9,7 @@ import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import { supabase } from "@/lib/supabase";
 import { type Conversion, progressLabel } from "@/lib/conversions";
+import { LoadingBlock } from "@/components/LoadingBlock";
 
 export default function NotesPage() {
   const params = useParams();
@@ -111,11 +112,7 @@ export default function NotesPage() {
   }
 
   if (!conversion) {
-    return (
-      <div className="mx-auto max-w-2xl px-6 py-8">
-        <p className="text-zinc-500 dark:text-zinc-400">Loading…</p>
-      </div>
-    );
+    return <LoadingBlock />;
   }
 
   if (conversion.status === "pending") {
