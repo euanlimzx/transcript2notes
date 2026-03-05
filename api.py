@@ -40,6 +40,7 @@ def _get_supabase():
 
 class ConvertRequest(BaseModel):
     transcript: str
+    userId: str | None = None  # Supabase auth user id; required for tracking
 
 
 class ConvertAcceptedResponse(BaseModel):
@@ -161,11 +162,13 @@ def _convert_impl(request: ConvertRequest) -> ConvertAcceptedResponse:
     transcript = (request.transcript or "").strip()
     if not transcript:
         raise HTTPException(status_code=400, detail="transcript is required and cannot be empty")
+    if not request.userId:
+        raise HTTPException(status_code=401, detail="userId is required; sign in to convert")
 
     job_id = str(uuid.uuid4())
     supabase = _get_supabase()
     supabase.table("conversions").insert(
-        {"id": job_id, "status": "pending"}
+        {"id": job_id, "status": "pending", "user_id": request.userId}
     ).execute()
 
     thread = threading.Thread(target=_run_pipeline_and_update, args=(job_id, transcript), daemon=True)

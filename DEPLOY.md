@@ -2,6 +2,14 @@
 
 The app uses **separate deployments**: Next.js on Vercel and the FastAPI backend on your own server (e.g. Render, Railway). The frontend proxies `/api/convert` and `/api/conversions/:id` to the backend.
 
+## 0. Supabase Auth and database migration
+
+- **Auth:** Users sign in via magic link; only **.edu** email addresses are accepted (simple suffix check).
+- **Supabase Dashboard:** Enable **Email** auth and configure **Site URL** and **Redirect URLs** under Authentication → URL Configuration. Add:
+  - `http://localhost:3000/auth/callback` (local)
+  - `https://your-app.vercel.app/auth/callback` (production)
+- **Run migration:** Apply `supabase/migrations/002_add_user_id_to_conversions.sql` to add `user_id` and RLS policies so conversions are scoped per user.
+
 ## 1. Vercel (frontend)
 
 - Deploy the repo as a Vercel project (Next.js is auto-detected).
@@ -39,4 +47,4 @@ No `BACKEND_URL` needed. The proxy defaults to `http://127.0.0.1:5328`.
 2. Start the frontend: `npm run dev`.
 3. Open http://localhost:3000.
 
-The app calls `/api/convert` and `/api/conversions/:id`; Next.js proxies them to the local FastAPI server.
+The app calls `/api/convert` (proxied to backend); conversions are listed and deleted via Supabase (RLS enforces per-user access).

@@ -7,6 +7,7 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 
 type Conversion = {
   id: string;
@@ -21,6 +22,7 @@ function splitMarkdownSections(markdown: string): string[] {
 }
 
 export default function Home() {
+  const router = useRouter();
   const [transcript, setTranscript] = useState("");
   const [conversions, setConversions] = useState<Conversion[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -39,7 +41,8 @@ export default function Home() {
     const { data, error } = await supabase
       .from("conversions")
       .select("id, status, markdown, error, created_at")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(100);
     if (error) {
       setFetchError(error.message);
       return;
@@ -172,8 +175,8 @@ export default function Home() {
   async function handleDeleteConversion(id: string, e: React.MouseEvent) {
     e.stopPropagation();
     try {
-      const res = await fetch(`/api/conversions/${id}`, { method: "DELETE" });
-      if (!res.ok) return;
+      const { error } = await supabase.from("conversions").delete().eq("id", id);
+      if (error) return;
       await fetchConversions();
       if (selectedId === id) {
         const remaining = conversions.filter((c) => c.id !== id);
@@ -192,10 +195,24 @@ export default function Home() {
     }
   }
 
+  async function handleSignOut() {
+    await supabase.auth.signOut();
+    router.refresh();
+  }
+
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
       <main className="mx-auto max-w-4xl px-4 py-8">
-        <h1 className="text-2xl font-semibold mb-6">Transcript to Notes</h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-semibold">Transcript to Notes</h1>
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="text-sm px-3 py-1.5 rounded border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          >
+            Sign out
+          </button>
+        </div>
 
         <label className="block text-sm font-medium text-zinc-600 dark:text-zinc-400 mb-2">
           Paste transcript
