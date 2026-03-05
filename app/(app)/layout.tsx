@@ -32,7 +32,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] flex">
+    <div className="h-screen overflow-hidden bg-[var(--background)] text-[var(--foreground)] flex">
       {/* Sidebar - always open, own scroll */}
       <aside
         className="flex flex-col border-r border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-[#1E1E1E] shrink-0 h-screen overflow-hidden"
