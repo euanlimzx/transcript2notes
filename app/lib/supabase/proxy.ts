@@ -28,8 +28,8 @@ export async function updateSession(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
 
-  // Require auth for main app; redirect to login if unauthenticated
-  if (path === "/" && !user) {
+  // Require auth for main app and notes; redirect to login if unauthenticated
+  if ((path === "/" || path.startsWith("/notes/")) && !user) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
   // If already logged in, redirect from login to home
