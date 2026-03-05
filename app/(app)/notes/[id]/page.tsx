@@ -8,11 +8,7 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import { supabase } from "@/lib/supabase";
-import {
-  type Conversion,
-  progressLabel,
-  splitMarkdownSections,
-} from "@/lib/conversions";
+import { type Conversion, progressLabel } from "@/lib/conversions";
 
 export default function NotesPage() {
   const params = useParams();
@@ -106,14 +102,6 @@ export default function NotesPage() {
     }
   }
 
-  async function copySection(section: string) {
-    try {
-      await navigator.clipboard.writeText(section);
-    } catch {
-      /* ignore */
-    }
-  }
-
   if (notFound) {
     return (
       <div className="mx-auto max-w-2xl px-6 py-8">
@@ -180,11 +168,7 @@ export default function NotesPage() {
   }
 
   // Completed
-  const sections = conversion.markdown
-    ? splitMarkdownSections(conversion.markdown)
-    : [];
-
-  if (sections.length === 0) {
+  if (!conversion.markdown?.trim()) {
     return (
       <div className="mx-auto max-w-2xl px-6 py-8">
         <p className="text-zinc-500 dark:text-zinc-400">No notes content.</p>
@@ -193,33 +177,17 @@ export default function NotesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-8">
-      <div className="space-y-6">
-        {sections.map((section, i) => (
-          <section
-            key={i}
-            className="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-4"
-          >
-            <div className="flex justify-end mb-2">
-              <button
-                type="button"
-                onClick={() => copySection(section)}
-                className="text-xs px-2 py-1 rounded border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-              >
-                Copy section
-              </button>
-            </div>
-            <div className="prose prose-zinc dark:prose-invert max-w-none prose-p:my-2 prose-ul:my-2 prose-li:my-0 prose-pre:bg-zinc-100 dark:prose-pre:bg-zinc-800">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm, remarkMath]}
-                rehypePlugins={[rehypeKatex]}
-              >
-                {section}
-              </ReactMarkdown>
-            </div>
-          </section>
-        ))}
-      </div>
+    <div
+      className="mx-auto max-w-3xl px-12 pt-36 pb-16 leading-relaxed"
+    >
+      <article className="prose prose-lg prose-zinc dark:prose-invert max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-p:my-4 prose-p:leading-8 prose-p:text-[1.125rem] prose-ul:my-4 prose-ol:my-4 prose-li:my-0.5 prose-li:text-[1.125rem] prose-pre:bg-zinc-100 dark:prose-pre:bg-zinc-800/50 prose-pre:rounded-md prose-pre:px-4 prose-pre:py-3 prose-pre:text-base prose-blockquote:border-l-zinc-300 dark:prose-blockquote:border-l-zinc-600 prose-blockquote:not-italic prose-blockquote:text-[1.125rem]">
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm, remarkMath]}
+          rehypePlugins={[rehypeKatex]}
+        >
+          {conversion.markdown}
+        </ReactMarkdown>
+      </article>
     </div>
   );
 }

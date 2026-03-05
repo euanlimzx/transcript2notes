@@ -41,17 +41,17 @@ export default function AppLayout({
   const COLLAPSED_WIDTH = 48;
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex">
+    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] flex">
       {/* Sidebar */}
       <aside
-        className="flex flex-col border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0 transition-[width] duration-200 ease-in-out overflow-hidden"
+        className="flex flex-col border-r border-zinc-200 dark:border-zinc-700 bg-[var(--background-secondary)] shrink-0 transition-[width] duration-200 ease-in-out overflow-hidden"
         style={{ width: sidebarOpen ? SIDEBAR_WIDTH : COLLAPSED_WIDTH }}
       >
         {/* Toggle */}
         <button
           type="button"
           onClick={() => setSidebarOpen((o) => !o)}
-          className="p-3 border-b border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center"
+          className="p-3 border-b border-zinc-200 dark:border-zinc-700 hover:opacity-80 flex items-center justify-center"
           aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
         >
           <svg
@@ -73,11 +73,11 @@ export default function AppLayout({
         {sidebarOpen && (
           <>
             {/* Generate notes - top */}
-            <div className="p-2 border-b border-zinc-200 dark:border-zinc-800">
+            <div className="p-2 border-b border-zinc-200 dark:border-zinc-700">
               <button
                 type="button"
                 onClick={() => router.push("/")}
-                className="w-full px-3 py-2 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-sm font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 flex items-center gap-2"
+                className="w-full px-3 py-2 rounded-lg bg-[var(--foreground)] text-[var(--background)] text-sm font-medium hover:opacity-90 flex items-center gap-2"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -109,9 +109,9 @@ export default function AppLayout({
                         <button
                           type="button"
                           onClick={() => router.push(`/notes/${c.id}`)}
-                          className={`w-full text-left px-3 py-2 rounded-lg text-sm truncate hover:bg-zinc-100 dark:hover:bg-zinc-800 ${
+                          className={`w-full text-left px-3 py-2 rounded-lg text-sm truncate hover:opacity-80 ${
                             isActive
-                              ? "bg-zinc-100 dark:bg-zinc-800 font-medium"
+                              ? "bg-zinc-200/50 dark:bg-white/10 font-medium"
                               : ""
                           }`}
                         >
@@ -125,11 +125,11 @@ export default function AppLayout({
             </div>
 
             {/* Sign out - bottom */}
-            <div className="p-2 border-t border-zinc-200 dark:border-zinc-800">
+            <div className="p-2 border-t border-zinc-200 dark:border-zinc-700">
               <button
                 type="button"
                 onClick={handleSignOut}
-                className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 text-sm hover:opacity-80"
               >
                 Sign out
               </button>
