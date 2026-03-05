@@ -4,11 +4,13 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import LightRays from "@/components/ui/light-rays";
 
-const EDU_SUFFIX = ".edu";
+// const EDU_SUFFIX = ".edu";
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function isEduEmail(email: string): boolean {
-  const domain = email.trim().toLowerCase().split("@")[1];
-  return !!domain?.toLowerCase().endsWith(EDU_SUFFIX);
+  // const domain = email.trim().toLowerCase().split("@")[1];
+  // return !!domain?.toLowerCase().endsWith(EDU_SUFFIX);
+  return true;
 }
 
 export default function LoginPage() {
