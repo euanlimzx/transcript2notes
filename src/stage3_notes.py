@@ -1,4 +1,5 @@
 """Stage 3: Turn each segment into markdown study notes via LLM (parallel per segment)."""
+from collections.abc import Callable
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -38,6 +39,7 @@ def run_stage3(
     segments: list[Segment],
     model: str = "gemini-3-flash-preview",
     api_key: str | None = None,
+    progress_callback: Callable[[str], None] | None = None,
 ) -> str:
     """
     Run Stage 3: for each segment, call LLM in parallel to convert transcript to
@@ -47,8 +49,16 @@ def run_stage3(
     if not segments:
         return ""
 
-    workers = min(MAX_CONCURRENT_REQUESTS, len(segments))
+    n = len(segments)
+    workers = min(MAX_CONCURRENT_REQUESTS, n)
     results: list[tuple[int, str]] = []
+    completed = 0
+
+    def on_segment_done() -> None:
+        nonlocal completed
+        completed += 1
+        if progress_callback:
+            progress_callback(f"generating_notes ({completed}/{n})")
 
     with ThreadPoolExecutor(max_workers=workers) as executor:
         futures = {
@@ -68,6 +78,7 @@ def run_stage3(
             except Exception as e:
                 logger.warning("Notes generation failed for segment %s: %s", idx + 1, e)
                 results.append((idx, f"*[Segment {idx + 1}: generation failed]*"))
+            on_segment_done()
 
     results.sort(key=lambda x: x[0])
     parts: list[str] = []

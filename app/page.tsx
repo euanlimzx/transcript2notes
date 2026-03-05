@@ -14,8 +14,19 @@ type Conversion = {
   status: "pending" | "completed" | "failed";
   markdown: string | null;
   error: string | null;
+  progress: string | null;
   created_at: string;
 };
+
+function progressLabel(progress: string | null): string {
+  if (!progress) return "Converting…";
+  if (progress === "parsing") return "Parsing transcript…";
+  if (progress === "extracting_topics") return "Extracting topics…";
+  if (progress === "segmenting") return "Segmenting transcript…";
+  const m = progress.match(/^generating_notes \((\d+\/\d+)\)$/);
+  if (m) return `Generating notes ${m[1]}…`;
+  return progress;
+}
 
 function splitMarkdownSections(markdown: string): string[] {
   return markdown.split(/\n(?=## )/).filter(Boolean);
@@ -35,12 +46,27 @@ export default function Home() {
   >({ state: "idle" });
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<
+    "idle" | "connecting" | "connected" | "error"
+  >("idle");
+  const [rerunLoading, setRerunLoading] = useState(false);
+
+  // Ping health on page load to pre-warm backend
+  useEffect(() => {
+    setConnectionStatus("connecting");
+    fetch("/api/health", { cache: "no-store" })
+      .then((res) => {
+        if (res.ok) setConnectionStatus("connected");
+        else setConnectionStatus("error");
+      })
+      .catch(() => setConnectionStatus("error"));
+  }, []);
 
   const fetchConversions = useCallback(async () => {
     setFetchError(null);
     const { data, error } = await supabase
       .from("conversions")
-      .select("id, status, markdown, error, created_at")
+      .select("id, status, markdown, error, progress, created_at")
       .order("created_at", { ascending: false })
       .limit(100);
     if (error) {
@@ -60,12 +86,15 @@ export default function Home() {
 
   // While there are pending conversions, periodically:
   // - ping /api/health to keep the backend awake
-  // - refresh the conversions list so completed jobs show up automatically
+  // - refresh the conversions list (faster when progress exists for live updates)
   useEffect(() => {
     if (!hasPending) return;
 
     const HEALTH_INTERVAL_MS = 30_000;
-    const REFRESH_INTERVAL_MS = 15_000;
+    const hasProgress = conversions.some(
+      (c) => c.status === "pending" && c.progress
+    );
+    const REFRESH_INTERVAL_MS = hasProgress ? 5_000 : 15_000;
 
     let healthTimer: number | undefined;
     let refreshTimer: number | undefined;
@@ -82,7 +111,6 @@ export default function Home() {
       await fetchConversions();
     };
 
-    // Kick off immediately, then on intervals.
     pingHealth();
     refresh();
 
@@ -97,7 +125,7 @@ export default function Home() {
         window.clearInterval(refreshTimer);
       }
     };
-  }, [hasPending, fetchConversions]);
+  }, [hasPending, fetchConversions, conversions]);
 
   const selected = conversions.find((c) => c.id === selectedId);
   const markdown =
@@ -195,6 +223,33 @@ export default function Home() {
     }
   }
 
+  async function handleRerun() {
+    if (!selectedId) return;
+    setRerunLoading(true);
+    setSubmitError(null);
+    try {
+      const res = await fetch("/api/convert/rerun", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId: selectedId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setSubmitError(data.detail ?? "Re-run failed.");
+        return;
+      }
+      const jobId = data.jobId as string | undefined;
+      if (jobId) {
+        await fetchConversions();
+        setSelectedId(jobId);
+      }
+    } catch (e) {
+      setSubmitError(e instanceof Error ? e.message : "Re-run failed.");
+    } finally {
+      setRerunLoading(false);
+    }
+  }
+
   async function handleSignOut() {
     await supabase.auth.signOut();
     router.refresh();
@@ -234,7 +289,12 @@ export default function Home() {
           {loading ? "Submitting…" : "Convert"}
         </button>
 
-        <div className="mt-3 flex items-center gap-3">
+        <div className="mt-3 flex items-center gap-3 flex-wrap">
+          {connectionStatus === "connecting" && (
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+              Establishing connection…
+            </span>
+          )}
           <button
             type="button"
             onClick={handleWake}
@@ -302,7 +362,8 @@ export default function Home() {
                       month: "short",
                       year: "numeric",
                     })}
-                    {c.status === "pending" && " — Converting…"}
+                    {c.status === "pending" &&
+                      ` — ${progressLabel(c.progress)}`}
                     {c.status === "failed" && " — Failed"}
                     {c.status === "completed" && " — Notes ready"}
                   </span>
@@ -325,18 +386,36 @@ export default function Home() {
         </div>
 
         {selected?.status === "pending" && (
-          <p className="mt-6 text-sm text-zinc-500 dark:text-zinc-400">
-            Conversion in progress. Refresh the page in a few minutes to see the result.
-          </p>
+          <div className="mt-6 flex items-center gap-2">
+            <span
+              className="inline-block w-2 h-2 rounded-full bg-zinc-400 dark:bg-zinc-500 animate-pulse"
+              aria-hidden
+            />
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              {progressLabel(selected.progress)} The page updates automatically.
+            </p>
+          </div>
         )}
 
-        {selected?.status === "failed" && selected?.error && (
-          <p
-            className="mt-6 text-sm text-red-600 dark:text-red-400"
-            role="alert"
-          >
-            {selected.error}
-          </p>
+        {selected?.status === "failed" && (
+          <div className="mt-6 space-y-2">
+            {selected.error && (
+              <p
+                className="text-sm text-red-600 dark:text-red-400"
+                role="alert"
+              >
+                {selected.error}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={handleRerun}
+              disabled={rerunLoading}
+              className="text-sm px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {rerunLoading ? "Re-running…" : "Re-run"}
+            </button>
+          </div>
         )}
 
         {sections.length > 0 && (
