@@ -4,13 +4,16 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import LightRays from "@/components/ui/light-rays";
 
-// const EDU_SUFFIX = ".edu";
+const ALLOWED_DOMAINS = [".edu", "gmail.com", "googlemail.com"];
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function isEduEmail(email: string): boolean {
-  // const domain = email.trim().toLowerCase().split("@")[1];
-  // return !!domain?.toLowerCase().endsWith(EDU_SUFFIX);
-  return true;
+function isAllowedEmail(email: string): boolean {
+  const domain = email.trim().toLowerCase().split("@")[1];
+  if (!domain) return false;
+  return (
+    domain.endsWith(".edu") ||
+    domain === "gmail.com" ||
+    domain === "googlemail.com"
+  );
 }
 
 export default function LoginPage() {
@@ -29,10 +32,10 @@ export default function LoginPage() {
       setMessage({ type: "error", text: "Please enter your email." });
       return;
     }
-    if (!isEduEmail(trimmed)) {
+    if (!isAllowedEmail(trimmed)) {
       setMessage({
         type: "error",
-        text: "Please use a .edu email address (e.g. you@university.edu).",
+        text: "Please use a Gmail or .edu email address.",
       });
       return;
     }
@@ -91,7 +94,7 @@ export default function LoginPage() {
           className="text-lg sm:text-xl md:text-2xl text-zinc-300 mb-8 sm:mb-14"
           style={{ fontFamily: "Google Sans, sans-serif" }}
         >
-          Enter your .edu email to get started
+          Enter a Gmail or .edu email address to get started
         </p>
 
         <form
@@ -101,7 +104,7 @@ export default function LoginPage() {
           <input
             id="email"
             type="email"
-            placeholder="you@university.edu"
+            placeholder="you@university.edu / you@gmail.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={loading}

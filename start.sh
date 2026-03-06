@@ -49,8 +49,12 @@ if ! npm list concurrently &>/dev/null; then
     npm install --save-dev concurrently
 fi
 
+# INNGEST_DEV=1 so the backend registers with the Inngest dev server
+export INNGEST_DEV=1
+
 npx concurrently \
-    --names "next,api" \
-    --prefix-colors "cyan,yellow" \
+    --names "next,api,inngest" \
+    --prefix-colors "cyan,yellow,magenta" \
     "npm run dev" \
-    "$UVICORN api:app --reload --port 5328"
+    "$UVICORN api:app --reload --port 5328" \
+    "npx inngest-cli@latest dev -u http://localhost:3000/api/inngest"

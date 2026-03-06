@@ -1,13 +1,14 @@
-"""FastAPI app: POST /convert accepts transcript, returns job id (202). Pipeline runs via queue and updates Supabase."""
+"""FastAPI app: POST /convert accepts transcript, returns job id (202). Pipeline runs via Inngest and updates Supabase."""
+import asyncio
 import hashlib
 import logging
 import os
-import queue
-import threading
 import time
 import uuid
 from datetime import datetime, timedelta, timezone
 
+import inngest
+import inngest.fast_api
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,10 +21,6 @@ logger = logging.getLogger("uvicorn")
 app = FastAPI(title="Transcript2Notes API")
 _STARTED_AT = time.time()
 
-# In-memory queue for conversions; worker pops and runs pipeline (1 worker for rate limiting)
-CONVERSION_QUEUE: queue.Queue[tuple[str, str, str]] = queue.Queue()
-CONVERSION_WORKERS = int(os.getenv("CONVERSION_WORKERS", "1"))
-
 allow_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000").strip().split(",")
 app.add_middleware(
     CORSMiddleware,
@@ -31,6 +28,11 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["POST", "GET"],
     allow_headers=["*"],
+)
+
+inngest_client = inngest.Inngest(
+    app_id=os.getenv("INNGEST_APP_ID", "transcript2notes"),
+    is_production=os.getenv("INNGEST_DEV", "1") != "1",
 )
 
 
@@ -44,18 +46,72 @@ def _get_supabase():
     return create_client(url, key)
 
 
-class ConvertRequest(BaseModel):
-    transcript: str
-    userId: str | None = None  # Supabase auth user id; required for tracking
+def _is_priority_user(user_id: str) -> bool:
+    """Check if user is in priority_users table."""
+    try:
+        res = (
+            _get_supabase()
+            .table("priority_users")
+            .select("user_id")
+            .eq("user_id", user_id)
+            .limit(1)
+            .execute()
+        )
+        return bool(res.data and len(res.data) > 0)
+    except Exception as e:
+        logger.warning("Failed to check priority_users for %s: %s", user_id, e)
+        return False
 
 
-class ConvertAcceptedResponse(BaseModel):
-    jobId: str
+def _emit_process_next() -> None:
+    """Emit conversion/process-next event to Inngest. Uses send_sync for sync context."""
+    try:
+        inngest_client.send_sync(
+            inngest.Event(name="conversion/process-next", data={}),
+        )
+        logger.info("Emitted conversion/process-next event")
+    except Exception as e:
+        logger.warning("Failed to emit process-next event: %s", e)
 
 
-class RerunRequest(BaseModel):
-    jobId: str
-    userId: str
+def _has_pending_jobs() -> bool:
+    """Check if any pending conversions exist (for startup emit)."""
+    try:
+        res = (
+            _get_supabase()
+            .table("conversions")
+            .select("id")
+            .eq("status", "pending")
+            .limit(1)
+            .execute()
+        )
+        return bool(res.data and len(res.data) > 0)
+    except Exception as e:
+        logger.warning("Failed to check pending conversions: %s", e)
+        return False
+
+
+def _get_queue_position(job_id: str) -> int | None:
+    """Return number of jobs ahead of this one (0 = next), or None if not pending."""
+    try:
+        supabase = _get_supabase()
+        # Get all pending jobs ordered by queue
+        res = (
+            supabase.table("conversions")
+            .select("id")
+            .eq("status", "pending")
+            .order("is_priority", desc=True)
+            .order("created_at", desc=False)
+            .execute()
+        )
+        rows = res.data or []
+        for i, row in enumerate(rows):
+            if row.get("id") == job_id:
+                return i
+        return None
+    except Exception as e:
+        logger.warning("Failed to get queue position for %s: %s", job_id, e)
+        return None
 
 
 def _run_pipeline_and_update(job_id: str, transcript: str, user_id: str) -> None:
@@ -85,26 +141,86 @@ def _run_pipeline_and_update(job_id: str, transcript: str, user_id: str) -> None
             logger.exception("Failed to update conversion %s to failed: %s", job_id, update_err)
 
 
-def _conversion_worker() -> None:
-    """Worker loop: pop jobs from queue, run pipeline, update Supabase."""
-    while True:
-        try:
-            job_id, transcript, user_id = CONVERSION_QUEUE.get()
-            _run_pipeline_and_update(job_id, transcript, user_id)
-        except Exception as e:
-            logger.exception("Worker error processing job: %s", e)
+@inngest_client.create_function(
+    fn_id="process-conversion-next",
+    trigger=inngest.TriggerEvent(event="conversion/process-next"),
+    concurrency=[inngest.Concurrency(limit=1)],
+    timeouts=inngest.Timeouts(finish=timedelta(minutes=15)),
+)
+async def process_conversion_next(ctx: inngest.Context) -> None:
+    """Pick next pending job, run pipeline, emit process-next if more pending."""
+    supabase = _get_supabase()
+
+    # Step 1: Get next job
+    res = (
+        supabase.table("conversions")
+        .select("id, transcript, user_id, status")
+        .eq("status", "pending")
+        .order("is_priority", desc=True)
+        .order("created_at", desc=False)
+        .limit(1)
+        .execute()
+    )
+    rows = res.data or []
+    if not rows:
+        logger.info("process-conversion-next: no pending jobs")
+        return
+
+    row = rows[0]
+    job_id = row.get("id")
+    transcript = row.get("transcript")
+    user_id = row.get("user_id")
+
+    if not job_id or not transcript or not user_id:
+        logger.warning("process-conversion-next: invalid job row %s", row)
+        return
+
+    # Step 2: Idempotency check
+    check = supabase.table("conversions").select("status").eq("id", job_id).single().execute()
+    if check.data and check.data.get("status") in ("completed", "failed"):
+        logger.info("process-conversion-next: job %s already %s, skipping", job_id, check.data.get("status"))
+        _emit_process_next()
+        return
+
+    # Step 3: Run pipeline (sync, run in thread to not block)
+    await asyncio.to_thread(_run_pipeline_and_update, job_id, transcript, user_id)
+
+    # Step 4: Emit if more pending
+    more_res = (
+        supabase.table("conversions")
+        .select("id")
+        .eq("status", "pending")
+        .limit(1)
+        .execute()
+    )
+    if more_res.data and len(more_res.data) > 0:
+        _emit_process_next()
+
+
+# Mount Inngest serve endpoint
+inngest.fast_api.serve(app, inngest_client, [process_conversion_next])
+
+
+class ConvertRequest(BaseModel):
+    transcript: str
+    userId: str | None = None  # Supabase auth user id; required for tracking
+
+
+class ConvertAcceptedResponse(BaseModel):
+    jobId: str
+
+
+class RerunRequest(BaseModel):
+    jobId: str
+    userId: str
 
 
 @app.on_event("startup")
 def startup() -> None:
-    # Mark stale pending conversions first
     mark_stale_pending_conversions()
-
-    # Start worker thread(s)
-    for i in range(CONVERSION_WORKERS):
-        t = threading.Thread(target=_conversion_worker, daemon=True)
-        t.start()
-        logger.info("Conversion worker %d started", i + 1)
+    if _has_pending_jobs():
+        _emit_process_next()
+        logger.info("Startup: emitted process-next for pending jobs")
 
 
 def mark_stale_pending_conversions() -> None:
@@ -181,7 +297,7 @@ def health_api():
 
 @app.post("/convert", response_model=ConvertAcceptedResponse, status_code=202)
 def convert(request: ConvertRequest) -> ConvertAcceptedResponse:
-    """Accept transcript, create pending conversion, return job id. Pipeline runs via queue."""
+    """Accept transcript, create pending conversion, return job id. Pipeline runs via Inngest."""
     return _convert_impl(request)
 
 
@@ -199,8 +315,24 @@ def _convert_impl(request: ConvertRequest) -> ConvertAcceptedResponse:
     if not request.userId:
         raise HTTPException(status_code=401, detail="userId is required; sign in to convert")
 
-    transcript_hash = hashlib.sha256(transcript.encode("utf-8")).hexdigest()
     supabase = _get_supabase()
+
+    # One job per user
+    existing = (
+        supabase.table("conversions")
+        .select("id")
+        .eq("user_id", request.userId)
+        .eq("status", "pending")
+        .limit(1)
+        .execute()
+    )
+    if existing.data and len(existing.data) > 0:
+        raise HTTPException(
+            status_code=409,
+            detail="You already have a conversion in progress. Wait for it to finish or close the tab.",
+        )
+
+    transcript_hash = hashlib.sha256(transcript.encode("utf-8")).hexdigest()
 
     # Hash deduplication: reuse any completed conversion with same transcript hash
     res = (
@@ -216,6 +348,7 @@ def _convert_impl(request: ConvertRequest) -> ConvertAcceptedResponse:
         match = rows[0]
         cached_markdown = match.get("markdown") or ""
         job_id = str(uuid.uuid4())
+        is_priority = _is_priority_user(request.userId)
         supabase.table("conversions").insert(
             {
                 "id": job_id,
@@ -224,12 +357,14 @@ def _convert_impl(request: ConvertRequest) -> ConvertAcceptedResponse:
                 "transcript": transcript,
                 "transcript_hash": transcript_hash,
                 "user_id": request.userId,
+                "is_priority": is_priority,
             }
         ).execute()
         logger.info("Conversion job %s created from cache (transcript_hash=%s)", job_id, transcript_hash[:16])
         return ConvertAcceptedResponse(jobId=job_id)
 
     job_id = str(uuid.uuid4())
+    is_priority = _is_priority_user(request.userId)
     supabase.table("conversions").insert(
         {
             "id": job_id,
@@ -237,10 +372,11 @@ def _convert_impl(request: ConvertRequest) -> ConvertAcceptedResponse:
             "transcript": transcript,
             "transcript_hash": transcript_hash,
             "user_id": request.userId,
+            "is_priority": is_priority,
         }
     ).execute()
 
-    CONVERSION_QUEUE.put((job_id, transcript, request.userId))
+    _emit_process_next()
 
     logger.info("Conversion job %s created (transcript_len=%d)", job_id, len(transcript))
     return ConvertAcceptedResponse(jobId=job_id)
@@ -250,6 +386,21 @@ def _convert_impl(request: ConvertRequest) -> ConvertAcceptedResponse:
 def rerun(request: RerunRequest) -> ConvertAcceptedResponse:
     """Re-run a failed conversion using its stored transcript."""
     supabase = _get_supabase()
+
+    # One job per user
+    existing = (
+        supabase.table("conversions")
+        .select("id")
+        .eq("user_id", request.userId)
+        .eq("status", "pending")
+        .limit(1)
+        .execute()
+    )
+    if existing.data and len(existing.data) > 0:
+        raise HTTPException(
+            status_code=409,
+            detail="You already have a conversion in progress. Wait for it to finish or close the tab.",
+        )
 
     res = (
         supabase.table("conversions")
@@ -273,6 +424,7 @@ def rerun(request: RerunRequest) -> ConvertAcceptedResponse:
 
     job_id = str(uuid.uuid4())
     transcript_hash = hashlib.sha256(transcript.encode("utf-8")).hexdigest()
+    is_priority = _is_priority_user(request.userId)
     supabase.table("conversions").insert(
         {
             "id": job_id,
@@ -280,13 +432,23 @@ def rerun(request: RerunRequest) -> ConvertAcceptedResponse:
             "transcript": transcript,
             "transcript_hash": transcript_hash,
             "user_id": request.userId,
+            "is_priority": is_priority,
         }
     ).execute()
 
-    CONVERSION_QUEUE.put((job_id, transcript, request.userId))
+    _emit_process_next()
 
     logger.info("Re-run job %s created from failed job %s", job_id, request.jobId)
     return ConvertAcceptedResponse(jobId=job_id)
+
+
+@app.get("/api/conversions/{job_id}/queue-position")
+def get_queue_position(job_id: str):
+    """Return jobs_before count for a pending conversion."""
+    pos = _get_queue_position(job_id)
+    if pos is None:
+        raise HTTPException(status_code=404, detail="Job not found or not pending")
+    return {"jobs_before": pos}
 
 
 @app.delete("/api/conversions/{job_id}")

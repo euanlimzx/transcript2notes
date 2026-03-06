@@ -7,8 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "dev:api": "uvicorn api:app --reload --port 5328",
-    "dev:all": "concurrently --names \"NEXT,API\" --prefix-colors \"cyan,yellow\" \"npm run dev\" \"npm run dev:api\"",
+    "dev:api": "INNGEST_DEV=1 uvicorn api:app --reload --port 5328",
+    "dev:all": "concurrently --names \"NEXT,API,INNGEST\" --prefix-colors \"cyan,yellow,magenta\" \"npm run dev\" \"INNGEST_DEV=1 npm run dev:api\" \"npx inngest-cli@latest dev -u http://localhost:3000/api/inngest\"",
     "setup": "bash start.sh"
   },
   "dependencies": {

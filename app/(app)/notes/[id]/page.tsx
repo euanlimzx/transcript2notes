@@ -16,6 +16,7 @@ export default function NotesPage() {
   const router = useRouter();
   const id = params.id as string;
   const [conversion, setConversion] = useState<Conversion | null>(null);
+  const [jobsBefore, setJobsBefore] = useState<number | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [rerunLoading, setRerunLoading] = useState(false);
   const [rerunError, setRerunError] = useState<string | null>(null);
@@ -59,24 +60,47 @@ export default function NotesPage() {
       const updated = await fetchConversion();
       if (updated?.status === "completed" || updated?.status === "failed") {
         setConversion(updated);
+        setJobsBefore(null);
+      }
+    };
+
+    const fetchQueuePosition = async () => {
+      try {
+        const res = await fetch(`/api/conversions/${id}/queue-position`, {
+          cache: "no-store",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setJobsBefore(
+            typeof data.jobs_before === "number" ? data.jobs_before : null
+          );
+        } else {
+          setJobsBefore(null);
+        }
+      } catch {
+        setJobsBefore(null);
       }
     };
 
     pingHealth();
     refresh();
+    fetchQueuePosition();
 
     const healthTimer = window.setInterval(pingHealth, HEALTH_INTERVAL_MS);
     const refreshTimer = window.setInterval(refresh, REFRESH_INTERVAL_MS);
+    const queueTimer = window.setInterval(fetchQueuePosition, REFRESH_INTERVAL_MS);
 
     return () => {
       window.clearInterval(healthTimer);
       window.clearInterval(refreshTimer);
+      window.clearInterval(queueTimer);
     };
   }, [
     conversion?.id,
     conversion?.status,
     conversion?.progress,
     fetchConversion,
+    id,
   ]);
 
   async function handleRerun() {
@@ -132,7 +156,11 @@ export default function NotesPage() {
               {progressLabel(conversion.progress)}
             </p>
             <p className="text-base text-zinc-500 dark:text-zinc-400 mt-1">
-              Do not close this tab. Notes will appear when ready.
+              {jobsBefore !== null
+                ? jobsBefore === 0
+                  ? "You're next in queue. Please do not close this tab."
+                  : `There are ${jobsBefore} job${jobsBefore === 1 ? "" : "s"} ahead of you in queue right now. Please do not close this tab.`
+                : "Please do not close this tab. Notes will appear when ready."}
             </p>
           </div>
         </div>
