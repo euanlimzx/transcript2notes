@@ -34,10 +34,16 @@ Deploy the same repo (or the backend parts) to Render, Railway, or any host that
 - `SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `GEMINI_API_KEY` or `GOOGLE_API_KEY`
+- `INNGEST_SIGNING_KEY`, `INNGEST_EVENT_KEY` (for Inngest Cloud; see below)
 
-Optional: `CORS_ORIGINS` (only needed if the browser will call the API directly; with the proxy setup you don’t need it).
+Optional (logging and HTTP behavior):
 
-**Health check (recommended on Render):** The backend includes `GET /health` (and `GET /api/health`). Use `/health` as the Render health check, and the frontend has `/api/health` for a “Wake server” button.
+- `CORS_ORIGINS` (only needed if the browser will call the API directly; with the proxy setup you don’t need it).
+- `T2N_ACCESS_LOG` — when unset or `0`, suppresses Uvicorn HTTP access logs (no noisy GET/health lines). Set to `1` only if you really need raw access logs.
+- `LLM_LOG_BODIES` — when `1`, backend logs include truncated LLM request/response bodies for debugging (pipeline + `pipeline.llm` only). Default `0` to avoid logging transcript text.
+- `T2N_FORCE_LOGGING` — rarely needed; when `1`, forces logging reconfiguration on startup. Useful if your host injects its own logging config and you still don’t see pipeline/LLM logs.
+
+**Health check (recommended on Render):** The backend includes `GET /health` (and `GET /api/health`). Use `/health` as the Render health check. Health requests are not logged by default unless you enable `T2N_ACCESS_LOG=1`.
 
 ### Inngest (job queue)
 

@@ -19,7 +19,7 @@ MIN_SEGMENT_DURATION_SEC = 180
 MIN_LINES_PER_SEGMENT = 15
 
 # Cap concurrent API calls to respect rate limits
-MAX_CONCURRENT_REQUESTS = 5
+MAX_CONCURRENT_REQUESTS = 10
 
 
 def _format_slice_for_prompt(lines: list[ParsedLine], use_line_numbers: bool = False) -> str:
@@ -36,9 +36,17 @@ def _call_llm_for_slice(
     model: str,
     system_prompt: str,
     api_key: str | None,
+    trace_id: str,
 ) -> str:
     """Single LLM call for one slice. Returns raw response content."""
-    return complete(system_prompt, slice_text, model, api_key=api_key, label="boundaries")
+    return complete(
+        system_prompt,
+        slice_text,
+        model,
+        api_key=api_key,
+        label="boundaries",
+        trace_id=trace_id,
+    )
 
 
 def _parse_timestamps_from_response(content: str) -> list[int]:
@@ -214,6 +222,8 @@ def run_stage2(
     model: str = "gemini-3-flash-preview",
     api_key: str | None = None,
     topics: list[str] | None = None,
+    *,
+    trace_id: str = "",
 ) -> list[Segment]:
     """
     Run Stage 2: call LLM for each slice (in parallel if multiple), merge boundaries, build segments.
@@ -226,8 +236,8 @@ def run_stage2(
     has_timestamps = all(ln.seconds is not None for ln in lines)
 
     if has_timestamps:
-        return _run_stage2_timestamped(lines, slices, model, api_key, topics)
-    return _run_stage2_line_numbers(lines, slices, model, api_key, topics)
+        return _run_stage2_timestamped(lines, slices, model, api_key, topics, trace_id)
+    return _run_stage2_line_numbers(lines, slices, model, api_key, topics, trace_id)
 
 
 def _run_stage2_timestamped(
@@ -236,9 +246,17 @@ def _run_stage2_timestamped(
     model: str,
     api_key: str | None,
     topics: list[str] | None,
+    trace_id: str,
 ) -> list[Segment]:
     """Timestamp-based boundary detection (original flow)."""
-    logger.info("Stage 2 (segmenting): %d slice(s), %d lines total", len(slices), len(lines))
+    prefix = f"[job={trace_id}] " if trace_id else ""
+    logger.info(
+        "%sStage 2 (segmenting): %d slice(s), %d lines total, workers<=%d",
+        prefix,
+        len(slices),
+        len(lines),
+        MAX_CONCURRENT_REQUESTS,
+    )
     system_prompt = (
         prompts_config.boundary_prompt_with_topics(topics)
         if topics
@@ -247,7 +265,7 @@ def _run_stage2_timestamped(
 
     if len(slices) == 1:
         slice_text = _format_slice_for_prompt(slices[0], use_line_numbers=False)
-        content = _call_llm_for_slice(slice_text, model, system_prompt, api_key)
+        content = _call_llm_for_slice(slice_text, model, system_prompt, api_key, trace_id)
         all_seconds = _parse_timestamps_from_response(content)
     else:
         slice_texts = [_format_slice_for_prompt(s, use_line_numbers=False) for s in slices]
@@ -256,7 +274,7 @@ def _run_stage2_timestamped(
         with ThreadPoolExecutor(max_workers=workers) as executor:
             futures = {
                 executor.submit(
-                    _call_llm_for_slice, st, model, system_prompt, api_key
+                    _call_llm_for_slice, st, model, system_prompt, api_key, trace_id
                 ): i
                 for i, st in enumerate(slice_texts)
             }
@@ -265,7 +283,7 @@ def _run_stage2_timestamped(
                     content = future.result()
                     all_seconds.extend(_parse_timestamps_from_response(content))
                 except Exception as e:
-                    logger.warning("LLM call failed for slice %s: %s", futures[future], e)
+                    logger.warning("%sLLM call failed for slice %s: %s", prefix, futures[future], e)
 
     t_start = lines[0].seconds if lines[0].seconds is not None else 0
     t_end = lines[-1].seconds if lines[-1].seconds is not None else 0
@@ -287,9 +305,17 @@ def _run_stage2_line_numbers(
     model: str,
     api_key: str | None,
     topics: list[str] | None,
+    trace_id: str,
 ) -> list[Segment]:
     """Line-number-based boundary detection when transcript has no timestamps."""
-    logger.info("Stage 2 (segmenting): %d slice(s), %d lines total (no timestamps)", len(slices), len(lines))
+    prefix = f"[job={trace_id}] " if trace_id else ""
+    logger.info(
+        "%sStage 2 (segmenting): %d slice(s), %d lines total (no timestamps), workers<=%d",
+        prefix,
+        len(slices),
+        len(lines),
+        MAX_CONCURRENT_REQUESTS,
+    )
     system_prompt = (
         prompts_config.boundary_prompt_line_numbers_with_topics(topics)
         if topics
@@ -300,7 +326,7 @@ def _run_stage2_line_numbers(
 
     if len(slices) == 1:
         slice_text = _format_slice_for_prompt(slices[0], use_line_numbers=True)
-        content = _call_llm_for_slice(slice_text, model, system_prompt, api_key)
+        content = _call_llm_for_slice(slice_text, model, system_prompt, api_key, trace_id)
         line_nums = _parse_line_numbers_from_response(content)
         global_indices = [start_indices[0] + (n - 1) for n in line_nums]
     else:
@@ -310,7 +336,7 @@ def _run_stage2_line_numbers(
         with ThreadPoolExecutor(max_workers=workers) as executor:
             futures = {
                 executor.submit(
-                    _call_llm_for_slice, st, model, system_prompt, api_key
+                    _call_llm_for_slice, st, model, system_prompt, api_key, trace_id
                 ): i
                 for i, st in enumerate(slice_texts)
             }
@@ -322,7 +348,7 @@ def _run_stage2_line_numbers(
                     base = start_indices[idx]
                     all_global_indices.extend(base + (n - 1) for n in line_nums)
                 except Exception as e:
-                    logger.warning("LLM call failed for slice %s: %s", futures[future], e)
+                    logger.warning("%sLLM call failed for slice %s: %s", prefix, futures[future], e)
         global_indices = sorted(set(all_global_indices))
 
     # Ensure first and last boundaries

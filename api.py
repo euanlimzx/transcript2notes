@@ -16,7 +16,60 @@ from pydantic import BaseModel
 
 load_dotenv()
 
-logger = logging.getLogger("uvicorn")
+logger = logging.getLogger(__name__)
+
+
+def _configure_logging() -> None:
+    """
+    Configure logging so backend logs focus on:
+    - pipeline triggers (convert/rerun/process-next)
+    - pipeline stage timing
+    - LLM calls (Gemini/OpenAI)
+    Suppress generic HTTP access / health noise.
+    Opt-in to access logs by setting T2N_ACCESS_LOG=1.
+    """
+    # 1) Root logger: WARNING (so framework noise is off by default)
+    root = logging.getLogger()
+    if not root.handlers or os.getenv("T2N_FORCE_LOGGING", "0") == "1":
+        logging.basicConfig(
+            level=logging.WARNING,
+            format="%(levelname)s:%(name)s:%(message)s",
+            force=True,
+        )
+    root.setLevel(logging.WARNING)
+
+    # 2) Suppress HTTP access logs unless explicitly enabled
+    if os.getenv("T2N_ACCESS_LOG", "0") != "1":
+        logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+
+    # 3) Dedicated stream handler for our pipeline/LLM loggers only
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.INFO)
+    handler.setFormatter(logging.Formatter("%(levelname)s:%(name)s:%(message)s"))
+
+    # Loggers we care about: app + pipeline stages + topic extraction + LLM
+    important_loggers = [
+        "api",
+        "src.pipeline",
+        "src.stage1_parse",
+        "src.stage2_boundaries",
+        "src.stage3_notes",
+        "src.topic_extraction",
+        "pipeline.llm",
+    ]
+    for name in important_loggers:
+        lg = logging.getLogger(name)
+        lg.handlers = []  # avoid duplicate output if reconfigured
+        lg.addHandler(handler)
+        lg.setLevel(logging.INFO)
+        lg.disabled = False
+        # Do not propagate to root (prevents double logging and framework noise)
+        lg.propagate = False
+
+    # Quiet common chatty libs unless explicitly enabled via their own settings.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("openai").setLevel(logging.WARNING)
+    logging.getLogger("google").setLevel(logging.WARNING)
 
 app = FastAPI(title="Transcript2Notes API")
 _STARTED_AT = time.time()
@@ -124,7 +177,13 @@ def _run_pipeline_and_update(job_id: str, transcript: str, user_id: str) -> None
     try:
         from src.pipeline import run_pipeline
 
-        markdown = run_pipeline(transcript, progress_callback=update_progress)
+        logger.info(
+            "[job=%s] Pipeline: start (user_id=%s, transcript_len=%d)",
+            job_id,
+            user_id,
+            len(transcript or ""),
+        )
+        markdown = run_pipeline(transcript, progress_callback=update_progress, trace_id=job_id)
         supabase = _get_supabase()
         supabase.table("conversions").update(
             {"status": "completed", "markdown": markdown, "progress": None}
@@ -217,6 +276,13 @@ class RerunRequest(BaseModel):
 
 @app.on_event("startup")
 def startup() -> None:
+    _configure_logging()
+    logger.info(
+        "Logging configured (access_log=%s, force=%s, llm_bodies=%s)",
+        os.getenv("T2N_ACCESS_LOG", "0"),
+        os.getenv("T2N_FORCE_LOGGING", "0"),
+        os.getenv("LLM_LOG_BODIES", "0"),
+    )
     mark_stale_pending_conversions()
     if _has_pending_jobs():
         _emit_process_next()

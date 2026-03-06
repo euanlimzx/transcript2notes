@@ -98,7 +98,7 @@ def main() -> None:
         logger.info("Loaded %d segments", len(segments))
         notes_path = Path(args.notes_output)
         logger.info("Stage 3: notes generation (model=%s)", args.model)
-        markdown = run_stage3(segments, model=args.model)
+        markdown = run_stage3(segments, model=args.model, trace_id="cli")
         notes_path.write_text(markdown, encoding="utf-8")
         logger.info("Wrote %s", notes_path)
         return
@@ -114,7 +114,7 @@ def main() -> None:
     topics = None
     if not args.no_topics:
         logger.info("Topic extraction (model=%s)", args.model)
-        raw_topics = extract_topics(lines, model=args.model)
+        raw_topics = extract_topics(lines, model=args.model, trace_id="cli")
         if raw_topics:
             topics = raw_topics
         logger.info("Extracted %d topics", len(topics) if topics else 0)
@@ -129,7 +129,7 @@ def main() -> None:
 
     logger.info("Stage 2: boundary detection (model=%s)", args.model)
     segments = run_stage2(
-        lines, slices, model=args.model, topics=topics
+        lines, slices, model=args.model, topics=topics, trace_id="cli"
     )
     logger.info("Built %d segments", len(segments))
 
@@ -140,7 +140,7 @@ def main() -> None:
     if not args.skip_notes:
         notes_path = Path(args.notes_output)
         logger.info("Stage 3: notes generation (model=%s)", args.model)
-        markdown = run_stage3(segments, model=args.model)
+        markdown = run_stage3(segments, model=args.model, trace_id="cli")
         notes_path.write_text(markdown, encoding="utf-8")
         logger.info("Wrote %s", notes_path)
 

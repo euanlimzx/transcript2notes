@@ -7,11 +7,15 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeou
 from google import genai
 from google.genai import types
 
-logger = logging.getLogger("uvicorn")
+logger = logging.getLogger("pipeline.llm")
 
 # How much of request/response to log (chars); rest is replaced with "... (N more chars)"
 LOG_REQUEST_MAX_CHARS = 600
 LOG_RESPONSE_MAX_CHARS = 800
+
+# Log request/response bodies (truncated) when set to "1".
+# Keep this off by default to avoid flooding logs with transcript content.
+LOG_LLM_BODIES = os.getenv("LLM_LOG_BODIES", "0") == "1"
 
 # Max seconds per LLM request; prevents indefinite hangs (e.g. 12+ min at "segmenting").
 # 180s allows Gemini attempt + OpenAI fallback on 503.
@@ -34,6 +38,26 @@ def _truncate(s: str, max_chars: int) -> str:
     return s[:max_chars] + f"... ({len(s) - max_chars} more chars)"
 
 
+def _format_exc_status(exc: Exception) -> str:
+    """
+    Best-effort extraction of HTTP-ish status/code from SDK exceptions.
+    Useful for distinguishing 429 vs 503 vs auth failures in logs.
+    """
+    code = getattr(exc, "code", None)
+    status_code = getattr(exc, "status_code", None)
+    # Some SDKs nest response objects.
+    resp = getattr(exc, "response", None)
+    resp_status = getattr(resp, "status_code", None) if resp is not None else None
+    parts: list[str] = []
+    if status_code is not None:
+        parts.append(f"status_code={status_code}")
+    if resp_status is not None:
+        parts.append(f"response_status={resp_status}")
+    if code is not None:
+        parts.append(f"code={code}")
+    return ", ".join(parts) if parts else "status=unknown"
+
+
 def _is_gemini_503_or_unavailable(exc: Exception) -> bool:
     """True if the exception indicates 503 / overload / unavailable (should fallback to OpenAI)."""
     msg = str(exc).upper()
@@ -52,6 +76,7 @@ def _complete_openai(
     api_key: str | None = None,
     *,
     label: str = "",
+    trace_id: str = "",
 ) -> str:
     """Call OpenAI Chat Completions with the same semantic (system + user)."""
     from openai import OpenAI
@@ -61,37 +86,61 @@ def _complete_openai(
     if not key:
         raise RuntimeError("OPENAI_API_KEY is not set; cannot fallback from Gemini 503")
     prefix = f" [{label}]" if label else ""
+    trace = f" trace={trace_id}" if trace_id else ""
     logger.info(
-        "OpenAI request%s: model=%s (mapped from %s), user_content_len=%d",
+        "OpenAI request%s%s: model=%s (mapped from %s), user_content_len=%d",
         prefix,
+        trace,
         openai_model,
         model,
         len(user_content),
     )
+    if LOG_LLM_BODIES:
+        logger.info(
+            "OpenAI request%s%s user_content:\n%s",
+            prefix,
+            trace,
+            _truncate(user_content, LOG_REQUEST_MAX_CHARS),
+        )
     t0 = time.perf_counter()
     client = OpenAI(api_key=key, timeout=LLM_TIMEOUT_SEC)
-    response = client.chat.completions.create(
-        model=openai_model,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_content},
-        ],
-        temperature=0,
-    )
-    elapsed = time.perf_counter() - t0
-    text = (response.choices[0].message.content or "").strip()
-    logger.info(
-        "OpenAI response%s: ok, len=%d, elapsed=%.2fs",
-        prefix,
-        len(text),
-        elapsed,
-    )
-    logger.info(
-        "OpenAI response%s body:\n%s",
-        prefix,
-        _truncate(text, LOG_RESPONSE_MAX_CHARS),
-    )
-    return text
+    try:
+        response = client.chat.completions.create(
+            model=openai_model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_content},
+            ],
+            temperature=0,
+        )
+        elapsed = time.perf_counter() - t0
+        text = (response.choices[0].message.content or "").strip()
+        logger.info(
+            "OpenAI response%s%s: ok, len=%d, elapsed=%.2fs",
+            prefix,
+            trace,
+            len(text),
+            elapsed,
+        )
+        if LOG_LLM_BODIES:
+            logger.info(
+                "OpenAI response%s%s body:\n%s",
+                prefix,
+                trace,
+                _truncate(text, LOG_RESPONSE_MAX_CHARS),
+            )
+        return text
+    except Exception as e:
+        elapsed = time.perf_counter() - t0
+        logger.exception(
+            "OpenAI response%s%s: error after %.2fs (%s): %s",
+            prefix,
+            trace,
+            elapsed,
+            _format_exc_status(e),
+            e,
+        )
+        raise
 
 
 def _complete_impl(
@@ -100,21 +149,26 @@ def _complete_impl(
     model: str,
     api_key: str | None,
     label: str,
+    trace_id: str,
 ) -> str:
     """Inner implementation: try Gemini, fallback to OpenAI on 503."""
     prefix = f" [{label}]" if label else ""
+    trace = f" trace={trace_id}" if trace_id else ""
     logger.info(
-        "Gemini request%s: model=%s, user_content_len=%d, system_prompt_len=%d",
+        "Gemini request%s%s: model=%s, user_content_len=%d, system_prompt_len=%d",
         prefix,
+        trace,
         model,
         len(user_content),
         len(system_prompt),
     )
-    logger.info(
-        "Gemini request%s user_content:\n%s",
-        prefix,
-        _truncate(user_content, LOG_REQUEST_MAX_CHARS),
-    )
+    if LOG_LLM_BODIES:
+        logger.info(
+            "Gemini request%s%s user_content:\n%s",
+            prefix,
+            trace,
+            _truncate(user_content, LOG_REQUEST_MAX_CHARS),
+        )
     t0 = time.perf_counter()
     try:
         client = genai.Client(api_key=api_key)
@@ -129,33 +183,45 @@ def _complete_impl(
         elapsed = time.perf_counter() - t0
         text = (response.text or "").strip()
         logger.info(
-            "Gemini response%s: ok, len=%d, elapsed=%.2fs",
+            "Gemini response%s%s: ok, len=%d, elapsed=%.2fs",
             prefix,
+            trace,
             len(text),
             elapsed,
         )
-        logger.info(
-            "Gemini response%s body:\n%s",
-            prefix,
-            _truncate(text, LOG_RESPONSE_MAX_CHARS),
-        )
+        if LOG_LLM_BODIES:
+            logger.info(
+                "Gemini response%s%s body:\n%s",
+                prefix,
+                trace,
+                _truncate(text, LOG_RESPONSE_MAX_CHARS),
+            )
         return text
     except Exception as e:
         elapsed = time.perf_counter() - t0
         if _is_gemini_503_or_unavailable(e):
             logger.warning(
-                "Gemini response%s: 503/unavailable after %.2fs, falling back to OpenAI: %s",
+                "Gemini response%s%s: 503/unavailable after %.2fs (%s), falling back to OpenAI: %s",
                 prefix,
+                trace,
                 elapsed,
+                _format_exc_status(e),
                 e,
             )
             return _complete_openai(
-                system_prompt, user_content, model, api_key=api_key, label=label
+                system_prompt,
+                user_content,
+                model,
+                api_key=api_key,
+                label=label,
+                trace_id=trace_id,
             )
         logger.exception(
-            "Gemini response%s: error after %.2fs: %s",
+            "Gemini response%s%s: error after %.2fs (%s): %s",
             prefix,
+            trace,
             elapsed,
+            _format_exc_status(e),
             e,
         )
         raise
@@ -168,6 +234,7 @@ def complete(
     api_key: str | None = None,
     *,
     label: str = "",
+    trace_id: str = "",
 ) -> str:
     """
     Call Gemini with system instruction and user content; return response text.
@@ -175,25 +242,34 @@ def complete(
     Uses GEMINI_API_KEY or GOOGLE_API_KEY from env if api_key is None.
     Enforces LLM_TIMEOUT_SEC per request to prevent indefinite hangs.
     """
-    with ThreadPoolExecutor(max_workers=1) as ex:
-        future = ex.submit(
-            _complete_impl,
-            system_prompt,
-            user_content,
-            model,
-            api_key,
-            label,
+    ex = ThreadPoolExecutor(max_workers=1)
+    future = ex.submit(
+        _complete_impl,
+        system_prompt,
+        user_content,
+        model,
+        api_key,
+        label,
+        trace_id,
+    )
+    try:
+        return future.result(timeout=LLM_TIMEOUT_SEC)
+    except FuturesTimeoutError:
+        # Important: do not wait for the hung worker thread. If the underlying SDK call
+        # is stuck, waiting here defeats the point of the timeout and can stall the
+        # whole pipeline (often presenting as "stuck at segmenting").
+        future.cancel()
+        logger.error(
+            "LLM request timed out after %ds (label=%s, trace=%s). "
+            "Check API keys, network, or try a shorter transcript.",
+            LLM_TIMEOUT_SEC,
+            label or "unknown",
+            trace_id or "",
         )
-        try:
-            return future.result(timeout=LLM_TIMEOUT_SEC)
-        except FuturesTimeoutError:
-            logger.error(
-                "LLM request timed out after %ds (label=%s). "
-                "Check API keys, network, or try a shorter transcript.",
-                LLM_TIMEOUT_SEC,
-                label or "unknown",
-            )
-            raise RuntimeError(
-                f"LLM request timed out after {LLM_TIMEOUT_SEC} seconds. "
-                "The API may be slow or overloaded. Try again or use a shorter transcript."
-            ) from None
+        raise RuntimeError(
+            f"LLM request timed out after {LLM_TIMEOUT_SEC} seconds. "
+            "The API may be slow or overloaded. Try again or use a shorter transcript."
+        ) from None
+    finally:
+        # Don't block shutdown; we're intentionally avoiding joining a potentially hung thread.
+        ex.shutdown(wait=False, cancel_futures=True)

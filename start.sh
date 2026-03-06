@@ -52,9 +52,16 @@ fi
 # INNGEST_DEV=1 so the backend registers with the Inngest dev server
 export INNGEST_DEV=1
 
+# Disable HTTP access logs by default (they get very noisy due to long polling / Inngest dev).
+# To re-enable: set T2N_ACCESS_LOG=1
+UVICORN_ACCESS_LOG_FLAG="--no-access-log"
+if [ "${T2N_ACCESS_LOG:-0}" = "1" ]; then
+    UVICORN_ACCESS_LOG_FLAG=""
+fi
+
 npx concurrently \
     --names "next,api,inngest" \
     --prefix-colors "cyan,yellow,magenta" \
     "npm run dev" \
-    "$UVICORN api:app --reload --port 5328" \
+    "$UVICORN api:app --reload --port 5328 $UVICORN_ACCESS_LOG_FLAG" \
     "npx inngest-cli@latest dev -u http://localhost:3000/api/inngest"

@@ -9,13 +9,14 @@ from . import prompts_config
 
 logger = logging.getLogger(__name__)
 
-MAX_CONCURRENT_REQUESTS = 5
+MAX_CONCURRENT_REQUESTS = 10
 
 
 def _call_llm_for_segment(
     segment_text: str,
     model: str,
     api_key: str | None,
+    trace_id: str,
 ) -> str:
     """Single LLM call for one segment. Returns raw markdown notes."""
     return complete(
@@ -24,6 +25,7 @@ def _call_llm_for_segment(
         model,
         api_key=api_key,
         label="notes",
+        trace_id=trace_id,
     )
 
 
@@ -40,6 +42,8 @@ def run_stage3(
     model: str = "gemini-3-flash-preview",
     api_key: str | None = None,
     progress_callback: Callable[[str], None] | None = None,
+    *,
+    trace_id: str = "",
 ) -> str:
     """
     Run Stage 3: for each segment, call LLM in parallel to convert transcript to
@@ -51,6 +55,14 @@ def run_stage3(
 
     n = len(segments)
     workers = min(MAX_CONCURRENT_REQUESTS, n)
+    prefix = f"[job={trace_id}] " if trace_id else ""
+    logger.info(
+        "%sStage 3 (notes): %d segment(s), workers=%d (max=%d)",
+        prefix,
+        n,
+        workers,
+        MAX_CONCURRENT_REQUESTS,
+    )
     results: list[tuple[int, str]] = []
     completed = 0
 
@@ -67,6 +79,7 @@ def run_stage3(
                 seg.text,
                 model,
                 api_key,
+                trace_id,
             ): i
             for i, seg in enumerate(segments)
         }
@@ -76,7 +89,7 @@ def run_stage3(
                 content = future.result()
                 results.append((idx, content))
             except Exception as e:
-                logger.warning("Notes generation failed for segment %s: %s", idx + 1, e)
+                logger.warning("%sNotes generation failed for segment %s: %s", prefix, idx + 1, e)
                 results.append((idx, f"*[Segment {idx + 1}: generation failed]*"))
             on_segment_done()
 
