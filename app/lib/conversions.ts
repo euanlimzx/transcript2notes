@@ -9,12 +9,19 @@ export type Conversion = {
 
 export function progressLabel(progress: string | null): string {
   if (!progress) return "Converting…";
+
+  // Known pipeline stages (backend emits these exact strings)
   if (progress === "parsing") return "Parsing transcript…";
   if (progress === "extracting_topics") return "Extracting topics…";
   if (progress === "segmenting") return "Segmenting transcript…";
+  if (progress === "generating_notes") return "Generating notes…";
+
+  // Per-segment progress in Stage 3: "generating_notes (2/5)"
   const m = progress.match(/^generating_notes \((\d+\/\d+)\)$/);
   if (m) return `Generating notes ${m[1]}…`;
-  return progress;
+
+  // Fallback: avoid leaking internal snake_case; show a generic label instead.
+  return "Converting…";
 }
 
 export function splitMarkdownSections(markdown: string): string[] {

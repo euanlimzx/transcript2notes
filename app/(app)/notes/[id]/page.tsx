@@ -158,9 +158,9 @@ export default function NotesPage() {
             <p className="text-base text-zinc-500 dark:text-zinc-400 mt-1">
               {jobsBefore !== null
                 ? jobsBefore === 0
-                  ? "You're next in queue. Please do not close this tab."
-                  : `There are ${jobsBefore} job${jobsBefore === 1 ? "" : "s"} ahead of you in queue right now. Please do not close this tab.`
-                : "Please do not close this tab. Notes will appear when ready."}
+                  ? "We're currently processing your transcript right now. We're expecting this to take a while, so feel free to check back in later for updates."
+                  : `There are ${jobsBefore} job${jobsBefore === 1 ? "" : "s"} ahead of you in queue right now. We're expecting this to take a while, so feel free to check back in later for updates.`
+                : "We're expecting this to take a while, so feel free to check back in later for updates."}
             </p>
           </div>
         </div>
