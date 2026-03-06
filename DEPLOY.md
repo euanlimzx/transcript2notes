@@ -58,6 +58,7 @@ The pipeline runs via Inngest for durability and retries. Set up Inngest as foll
 
 **4. Production (Render, etc.)**
 
+- **Do not set `INNGEST_DEV`** in production. If it's set to `1`, Inngest stays in dev mode even with signing keys.
 - In the [Inngest Dashboard](https://app.inngest.com) → your app → **Manage** → **Keys**:
   - Copy **Signing key** and set `INNGEST_SIGNING_KEY` on your backend.
   - Copy **Event key** and set `INNGEST_EVENT_KEY` on your backend (for sending events).

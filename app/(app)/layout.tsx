@@ -222,6 +222,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <HamburgerIcon />
         </button>
         <div className="flex-1 min-h-0 overflow-auto pt-12 md:pt-0">{children}</div>
+        <footer className="shrink-0 py-3 text-center text-xs text-zinc-500 dark:text-zinc-400">
+          made with ❤️ by{" "}
+          <a
+            href="https://www.euanlimzx.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+          >
+            euanlimzx
+          </a>
+        </footer>
       </main>
     </div>
   );

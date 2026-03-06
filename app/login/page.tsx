@@ -131,6 +131,17 @@ export default function LoginPage() {
           </p>
         )}
       </main>
+      <footer className="relative z-10 shrink-0 py-3 text-center text-xs text-zinc-400">
+        made with ❤️ by{" "}
+        <a
+          href="https://www.euanlimzx.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:text-zinc-300 transition-colors"
+        >
+          euanlimzx
+        </a>
+      </footer>
     </div>
   );
 }

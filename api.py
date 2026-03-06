@@ -32,7 +32,7 @@ app.add_middleware(
 
 inngest_client = inngest.Inngest(
     app_id=os.getenv("INNGEST_APP_ID", "transcript2notes"),
-    is_production=os.getenv("INNGEST_DEV", "1") != "1",
+    is_production=os.getenv("INNGEST_DEV") != "1",  # Production by default; set INNGEST_DEV=1 for local dev
 )
 
 
