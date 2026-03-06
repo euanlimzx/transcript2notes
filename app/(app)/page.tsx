@@ -90,6 +90,7 @@ export default function HomePage() {
             className={`relative flex items-end bg-zinc-100 dark:bg-zinc-800/80 transition-[border-radius] duration-300 ease-out ${
               isExpanded ? "rounded-2xl" : "rounded-3xl"
             }`}
+            aria-busy={loading}
           >
             <textarea
               rows={rows}
@@ -103,6 +104,15 @@ export default function HomePage() {
               disabled={loading}
               style={{ overflow: rows === 1 ? "hidden" : "auto" }}
             />
+            {loading && (
+              <div className="absolute right-4 bottom-3 flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                <span
+                  className="h-3 w-3 border-2 border-zinc-400 dark:border-zinc-500 border-t-transparent rounded-full animate-spin"
+                  aria-hidden
+                />
+                <span>Converting your transcript…</span>
+              </div>
+            )}
           </div>
         </div>
 

@@ -4,6 +4,7 @@ export type Conversion = {
   markdown: string | null;
   error: string | null;
   progress: string | null;
+  name: string | null;
   created_at: string;
 };
 
@@ -29,6 +30,10 @@ export function splitMarkdownSections(markdown: string): string[] {
 }
 
 export function formatSidebarTitle(c: Conversion): string {
+  if (c.name && c.name.trim().length > 0) {
+    return c.name.trim();
+  }
+
   const d = new Date(c.created_at);
   const date = d.toLocaleDateString(undefined, {
     day: "numeric",

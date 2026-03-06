@@ -1,0 +1,47 @@
+/** Proxies POST /api/conversions/rename to the Python backend. Requires auth; passes userId. */
+const BACKEND = process.env.BACKEND_URL ?? "http://127.0.0.1:5328";
+const PROXY_TIMEOUT_MS = 15_000;
+
+import { createClient } from "@/lib/supabase/server";
+
+export async function POST(request: Request) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return Response.json({ detail: "Unauthorized. Please sign in." }, { status: 401 });
+  }
+
+  const body = await request.json();
+  const jobId = body?.jobId;
+  const name = typeof body?.name === "string" ? body.name : "";
+
+  if (!jobId || typeof jobId !== "string") {
+    return Response.json({ detail: "jobId is required" }, { status: 400 });
+  }
+
+  const payload = { jobId, userId: user.id, name };
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), PROXY_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${BACKEND}/api/conversions/rename`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    const data = await res.json().catch(() => ({}));
+    clearTimeout(timeoutId);
+    return Response.json(data, { status: res.status });
+  } catch (e) {
+    clearTimeout(timeoutId);
+    return Response.json(
+      { detail: e instanceof Error ? e.message : "Failed to update name." },
+      { status: 502 }
+    );
+  }
+}
+

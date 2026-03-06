@@ -24,7 +24,7 @@ export default function NotesPage() {
   const fetchConversion = useCallback(async () => {
     const { data, error } = await supabase
       .from("conversions")
-      .select("id, status, markdown, error, progress, created_at")
+      .select("id, status, markdown, error, progress, name, created_at")
       .eq("id", id)
       .single();
     if (error || !data) {
@@ -95,13 +95,7 @@ export default function NotesPage() {
       window.clearInterval(refreshTimer);
       window.clearInterval(queueTimer);
     };
-  }, [
-    conversion?.id,
-    conversion?.status,
-    conversion?.progress,
-    fetchConversion,
-    id,
-  ]);
+  }, [conversion, fetchConversion, id]);
 
   async function handleRerun() {
     if (!id) return;
@@ -208,7 +202,6 @@ export default function NotesPage() {
       </div>
     );
   }
-
   return (
     <div className="mx-auto max-w-3xl px-6 sm:px-8 md:px-12 pt-4 sm:pt-10 md:pt-36 pb-12 md:pb-16 leading-relaxed">
       <article className="prose prose-base sm:prose-lg prose-zinc dark:prose-invert max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-p:my-3 sm:prose-p:my-4 prose-p:leading-7 sm:prose-p:leading-8 prose-p:text-base sm:prose-p:text-[1.125rem] prose-ul:my-3 sm:prose-ul:my-4 prose-ol:my-3 sm:prose-ol:my-4 prose-li:my-0.5 prose-li:text-base sm:prose-li:text-[1.125rem] prose-pre:bg-zinc-100 dark:prose-pre:bg-zinc-800/50 prose-pre:rounded-md prose-pre:px-3 sm:prose-pre:px-4 prose-pre:py-2 sm:prose-pre:py-3 prose-pre:text-sm sm:prose-pre:text-base prose-blockquote:border-l-zinc-300 dark:prose-blockquote:border-l-zinc-600 prose-blockquote:not-italic prose-blockquote:text-base sm:prose-blockquote:text-[1.125rem]">

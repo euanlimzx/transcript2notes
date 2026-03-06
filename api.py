@@ -274,6 +274,12 @@ class RerunRequest(BaseModel):
     userId: str
 
 
+class RenameRequest(BaseModel):
+    jobId: str
+    userId: str
+    name: str | None = None
+
+
 @app.on_event("startup")
 def startup() -> None:
     _configure_logging()
@@ -506,6 +512,32 @@ def rerun(request: RerunRequest) -> ConvertAcceptedResponse:
 
     logger.info("Re-run job %s created from failed job %s", job_id, request.jobId)
     return ConvertAcceptedResponse(jobId=job_id)
+
+
+@app.post("/api/conversions/rename")
+def rename_conversion(request: RenameRequest):
+    """Rename a conversion owned by the user."""
+    supabase = _get_supabase()
+
+    res = (
+        supabase.table("conversions")
+        .select("id, user_id")
+        .eq("id", request.jobId)
+        .limit(1)
+        .execute()
+    )
+    rows = res.data or []
+    if not rows:
+        raise HTTPException(status_code=404, detail="Conversion not found")
+    row = rows[0]
+
+    if row.get("user_id") != request.userId:
+        raise HTTPException(status_code=403, detail="Not authorized to rename this conversion")
+
+    name = (request.name or "").strip()
+    supabase.table("conversions").update({"name": name or None}).eq("id", request.jobId).execute()
+    logger.info("Renamed conversion %s", request.jobId)
+    return {"ok": True}
 
 
 @app.get("/api/conversions/{job_id}/queue-position")
