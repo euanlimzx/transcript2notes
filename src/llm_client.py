@@ -2,6 +2,7 @@
 import logging
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 from google import genai
 from google.genai import types
@@ -11,6 +12,10 @@ logger = logging.getLogger("uvicorn")
 # How much of request/response to log (chars); rest is replaced with "... (N more chars)"
 LOG_REQUEST_MAX_CHARS = 600
 LOG_RESPONSE_MAX_CHARS = 800
+
+# Max seconds per LLM request; prevents indefinite hangs (e.g. 12+ min at "segmenting").
+# 180s allows Gemini attempt + OpenAI fallback on 503.
+LLM_TIMEOUT_SEC = 300
 
 # Map Gemini model names to OpenAI model for fallback on 503
 GEMINI_TO_OPENAI_MODEL = {
@@ -64,7 +69,7 @@ def _complete_openai(
         len(user_content),
     )
     t0 = time.perf_counter()
-    client = OpenAI(api_key=key)
+    client = OpenAI(api_key=key, timeout=LLM_TIMEOUT_SEC)
     response = client.chat.completions.create(
         model=openai_model,
         messages=[
@@ -89,19 +94,14 @@ def _complete_openai(
     return text
 
 
-def complete(
+def _complete_impl(
     system_prompt: str,
     user_content: str,
     model: str,
-    api_key: str | None = None,
-    *,
-    label: str = "",
+    api_key: str | None,
+    label: str,
 ) -> str:
-    """
-    Call Gemini with system instruction and user content; return response text.
-    On 503 / UNAVAILABLE, retry that call with OpenAI and return OpenAI response.
-    Uses GEMINI_API_KEY or GOOGLE_API_KEY from env if api_key is None.
-    """
+    """Inner implementation: try Gemini, fallback to OpenAI on 503."""
     prefix = f" [{label}]" if label else ""
     logger.info(
         "Gemini request%s: model=%s, user_content_len=%d, system_prompt_len=%d",
@@ -159,3 +159,41 @@ def complete(
             e,
         )
         raise
+
+
+def complete(
+    system_prompt: str,
+    user_content: str,
+    model: str,
+    api_key: str | None = None,
+    *,
+    label: str = "",
+) -> str:
+    """
+    Call Gemini with system instruction and user content; return response text.
+    On 503 / UNAVAILABLE, retry that call with OpenAI and return OpenAI response.
+    Uses GEMINI_API_KEY or GOOGLE_API_KEY from env if api_key is None.
+    Enforces LLM_TIMEOUT_SEC per request to prevent indefinite hangs.
+    """
+    with ThreadPoolExecutor(max_workers=1) as ex:
+        future = ex.submit(
+            _complete_impl,
+            system_prompt,
+            user_content,
+            model,
+            api_key,
+            label,
+        )
+        try:
+            return future.result(timeout=LLM_TIMEOUT_SEC)
+        except FuturesTimeoutError:
+            logger.error(
+                "LLM request timed out after %ds (label=%s). "
+                "Check API keys, network, or try a shorter transcript.",
+                LLM_TIMEOUT_SEC,
+                label or "unknown",
+            )
+            raise RuntimeError(
+                f"LLM request timed out after {LLM_TIMEOUT_SEC} seconds. "
+                "The API may be slow or overloaded. Try again or use a shorter transcript."
+            ) from None

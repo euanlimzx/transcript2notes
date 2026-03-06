@@ -238,6 +238,7 @@ def _run_stage2_timestamped(
     topics: list[str] | None,
 ) -> list[Segment]:
     """Timestamp-based boundary detection (original flow)."""
+    logger.info("Stage 2 (segmenting): %d slice(s), %d lines total", len(slices), len(lines))
     system_prompt = (
         prompts_config.boundary_prompt_with_topics(topics)
         if topics
@@ -288,6 +289,7 @@ def _run_stage2_line_numbers(
     topics: list[str] | None,
 ) -> list[Segment]:
     """Line-number-based boundary detection when transcript has no timestamps."""
+    logger.info("Stage 2 (segmenting): %d slice(s), %d lines total (no timestamps)", len(slices), len(lines))
     system_prompt = (
         prompts_config.boundary_prompt_line_numbers_with_topics(topics)
         if topics
