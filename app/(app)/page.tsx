@@ -96,7 +96,7 @@ export default function HomePage() {
             <textarea
               rows={rows}
               className="w-full resize-none bg-transparent px-5 py-3.5 pr-14 text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none text-base leading-relaxed min-h-0"
-              placeholder="Paste your transcript here"
+              placeholder="Paste your transcript or a YouTube link"
               value={transcript}
               onChange={(e) => setTranscript(e.target.value)}
               onFocus={() => setIsFocused(true)}
