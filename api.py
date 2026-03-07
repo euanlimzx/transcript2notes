@@ -4,6 +4,7 @@ import errno
 import hashlib
 import logging
 import os
+import re
 import time
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -15,6 +16,8 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api.formatters import TextFormatter
 
 GENERIC_ERROR_DETAIL = "An unexpected error occurred with our servers."
 
@@ -312,6 +315,47 @@ async def process_conversion_next(ctx: inngest.Context) -> None:
 inngest.fast_api.serve(app, inngest_client, [process_conversion_next])
 
 
+# YouTube URL detection: watch?v=ID or youtu.be/ID
+_YT_URL_RE = re.compile(
+    r"^(?:https?://)?(?:www\.)?(?:youtube\.com/watch\?v=([\w-]+)|youtu\.be/([\w-]+))$",
+    re.IGNORECASE,
+)
+
+
+def _is_only_youtube_url(text: str) -> bool:
+    """True if the trimmed string is only a YouTube URL (and nothing else)."""
+    return bool(_YT_URL_RE.match((text or "").strip()))
+
+
+def _youtube_url_to_video_id(text: str) -> str | None:
+    """Extract video ID from a YouTube URL. Returns None if not a recognized URL."""
+    m = _YT_URL_RE.match((text or "").strip())
+    if not m:
+        return None
+    return m.group(1) or m.group(2)
+
+
+def _fetch_youtube_transcript(video_id: str) -> str:
+    """
+    Fetch transcript for a YouTube video using youtube-transcript-api.
+    Returns plain text. Raises HTTPException on failure.
+    """
+    try:
+        ytt_api = YouTubeTranscriptApi()
+        fetched = ytt_api.fetch(video_id)
+        return TextFormatter().format_transcript(fetched)
+    except Exception as e:
+        logger.warning("YouTube transcript fetch failed for video_id=%s: %s", video_id, e)
+        msg = str(e).strip() or "Could not retrieve transcript for this video."
+        if "disabled" in msg.lower() or "not available" in msg.lower():
+            detail = "No transcript available for this video. Captions may be disabled."
+        elif "private" in msg.lower() or "unavailable" in msg.lower():
+            detail = "This video is private or unavailable."
+        else:
+            detail = "Could not fetch transcript for this YouTube video. The video may have no captions or they may be disabled."
+        raise HTTPException(status_code=400, detail=detail)
+
+
 class ConvertRequest(BaseModel):
     transcript: str
     userId: str | None = None  # Supabase auth user id; required for tracking
@@ -438,6 +482,12 @@ def _convert_impl(request: ConvertRequest) -> ConvertAcceptedResponse:
         raise HTTPException(status_code=400, detail="transcript is required and cannot be empty")
     if not request.userId:
         raise HTTPException(status_code=401, detail="userId is required; sign in to convert")
+
+    # If user pasted a YouTube URL, fetch transcript via youtube-transcript-api (PyPI)
+    if _is_only_youtube_url(transcript):
+        video_id = _youtube_url_to_video_id(transcript)
+        if video_id:
+            transcript = _fetch_youtube_transcript(video_id)
 
     supabase = _get_supabase()
 

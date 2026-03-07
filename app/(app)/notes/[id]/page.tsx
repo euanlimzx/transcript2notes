@@ -41,28 +41,59 @@ export default function NotesPage() {
     fetchConversion();
   }, [fetchConversion]);
 
-  // Poll when pending
+  // Realtime: subscribe to conversion row updates (replaces refresh polling)
+  useEffect(() => {
+    if (!id || notFound) return;
+
+    const channel = supabase
+      .channel(`conversion:${id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "conversions",
+          filter: `id=eq.${id}`,
+        },
+        (payload) => {
+          if (process.env.NODE_ENV === "development") {
+            console.log("[Realtime] conversion update", payload);
+          }
+          const row = payload.new as Record<string, unknown>;
+          if (!row) return;
+          setConversion({
+            id: row.id as string,
+            status: row.status as Conversion["status"],
+            markdown: (row.markdown as string) ?? null,
+            error: (row.error as string) ?? null,
+            progress: (row.progress as string) ?? null,
+            name: (row.name as string) ?? null,
+            created_at: row.created_at as string,
+          });
+          if (
+            (row.status as string) === "completed" ||
+            (row.status as string) === "failed"
+          ) {
+            setJobsBefore(null);
+          }
+        }
+      )
+      .subscribe((status) => {
+        if (process.env.NODE_ENV === "development") {
+          console.log("[Realtime] subscription status:", status);
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, notFound]);
+
+  // Queue position only (no health/refresh); computed server-side so we poll
   useEffect(() => {
     if (!conversion || conversion.status !== "pending") return;
 
-    const HEALTH_INTERVAL_MS = 60_000;
-    const REFRESH_INTERVAL_MS = 60_000;
-
-    const pingHealth = async () => {
-      try {
-        await fetch("/api/health", { cache: "no-store" });
-      } catch {
-        /* ignore */
-      }
-    };
-
-    const refresh = async () => {
-      const updated = await fetchConversion();
-      if (updated?.status === "completed" || updated?.status === "failed") {
-        setConversion(updated);
-        setJobsBefore(null);
-      }
-    };
+    const QUEUE_POLL_INTERVAL_MS = 60_000;
 
     const fetchQueuePosition = async () => {
       try {
@@ -72,7 +103,7 @@ export default function NotesPage() {
         if (res.ok) {
           const data = await res.json();
           setJobsBefore(
-            typeof data.jobs_before === "number" ? data.jobs_before : null,
+            typeof data.jobs_before === "number" ? data.jobs_before : null
           );
         } else {
           setJobsBefore(null);
@@ -82,23 +113,14 @@ export default function NotesPage() {
       }
     };
 
-    pingHealth();
-    refresh();
     fetchQueuePosition();
-
-    const healthTimer = window.setInterval(pingHealth, HEALTH_INTERVAL_MS);
-    const refreshTimer = window.setInterval(refresh, REFRESH_INTERVAL_MS);
     const queueTimer = window.setInterval(
       fetchQueuePosition,
-      REFRESH_INTERVAL_MS,
+      QUEUE_POLL_INTERVAL_MS
     );
-
-    return () => {
-      window.clearInterval(healthTimer);
-      window.clearInterval(refreshTimer);
-      window.clearInterval(queueTimer);
-    };
-  }, [conversion, fetchConversion, id]);
+    return () => window.clearInterval(queueTimer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run when status or id changes; avoid restarting timer on every Realtime progress tick
+  }, [conversion?.status, id]);
 
   async function handleRerun() {
     if (!id) return;

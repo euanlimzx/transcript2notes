@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { GENERIC_ERROR_MESSAGE } from "@/lib/errors";
+import { GENERIC_ERROR_MESSAGE, normalizeApiErrorDetail } from "@/lib/errors";
 
 const ROWS_COLLAPSED = 1;
 const ROWS_EXPANDED = 4;
@@ -38,6 +38,8 @@ export default function HomePage() {
     }
     setSubmitError(null);
     setLoading(true);
+    // Yield so the spinner paints before we block on the request
+    await new Promise((r) => setTimeout(r, 0));
     try {
       const res = await fetch("/api/convert", {
         method: "POST",
@@ -46,7 +48,7 @@ export default function HomePage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setSubmitError(data.detail ?? "Conversion failed.");
+        setSubmitError(normalizeApiErrorDetail(data.detail, "Conversion failed."));
         return;
       }
       const jobId = data.jobId as string | undefined;

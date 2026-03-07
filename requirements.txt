@@ -5,3 +5,4 @@ uvicorn[standard]>=0.32
 supabase>=2.0
 openai>=1.0
 inngest>=0.4
+youtube-transcript-api>=1.0
