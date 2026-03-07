@@ -125,8 +125,8 @@ export default function NotesPage() {
 
   if (notFound) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-full w-full px-6 sm:px-8 py-6 sm:py-8">
-        <p className="text-base font-medium text-zinc-500 dark:text-zinc-400">
+      <div className="flex flex-col items-center justify-start min-h-full w-full px-6 sm:px-8 pt-[30vh] pb-8">
+        <p className="text-base font-medium text-zinc-500 dark:text-zinc-400 w-full max-w-[50%] text-left">
           Conversion not found.
         </p>
       </div>
@@ -139,13 +139,13 @@ export default function NotesPage() {
 
   if (conversion.status === "pending") {
     return (
-      <div className="flex flex-col items-center justify-center min-h-full w-full px-6 sm:px-8 py-6 sm:py-8">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col items-center justify-start min-h-full w-full px-6 sm:px-8 pt-[30vh] pb-8">
+        <div className="flex items-start gap-2 w-full max-w-[50%]">
           <span
-            className="inline-block w-2 h-2 rounded-full bg-zinc-400 dark:bg-zinc-500 animate-pulse"
+            className="inline-block w-2 h-2 rounded-full bg-zinc-400 dark:bg-zinc-500 animate-pulse shrink-0 mt-1.5"
             aria-hidden
           />
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="text-base font-medium">
               {progressLabel(conversion.progress)}
             </p>
@@ -164,30 +164,32 @@ export default function NotesPage() {
 
   if (conversion.status === "failed") {
     return (
-      <div className="flex flex-col items-center justify-center min-h-full w-full px-6 sm:px-8 py-6 sm:py-8 text-center">
-        {conversion.error && (
-          <p
-            className="text-base font-medium text-red-600 dark:text-red-400 mb-4"
-            role="alert"
+      <div className="flex flex-col items-center justify-start min-h-full w-full px-6 sm:px-8 pt-[30vh] pb-8">
+        <div className="w-full max-w-[50%] flex flex-col items-start text-left">
+          {conversion.error && (
+            <p
+              className="text-base font-medium text-red-600 dark:text-red-400 mb-4"
+              role="alert"
+            >
+              {conversion.error}
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={handleRerun}
+            disabled={rerunLoading}
+            className="text-sm sm:text-base font-medium px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {conversion.error}
-          </p>
-        )}
-        <button
-          type="button"
-          onClick={handleRerun}
-          disabled={rerunLoading}
-          className="text-sm sm:text-base font-medium px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed max-w-full"
-        >
-          {rerunLoading
-            ? "Attempting…"
-            : "Previous conversion failed. Tap to try again"}
-        </button>
-        {rerunError && (
-          <p className="mt-4 text-base font-medium text-red-600 dark:text-red-400">
-            {rerunError}
-          </p>
-        )}
+            {rerunLoading
+              ? "Attempting…"
+              : "Previous conversion failed. Tap to try again"}
+          </button>
+          {rerunError && (
+            <p className="mt-4 text-base font-medium text-red-600 dark:text-red-400">
+              {rerunError}
+            </p>
+          )}
+        </div>
       </div>
     );
   }
@@ -195,8 +197,8 @@ export default function NotesPage() {
   // Completed
   if (!conversion.markdown?.trim()) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-full w-full px-6 sm:px-8 py-6 sm:py-8">
-        <p className="text-base font-medium text-zinc-500 dark:text-zinc-400">
+      <div className="flex flex-col items-center justify-start min-h-full w-full px-6 sm:px-8 pt-[30vh] pb-8">
+        <p className="text-base font-medium text-zinc-500 dark:text-zinc-400 w-full max-w-[50%] text-left">
           No notes content.
         </p>
       </div>

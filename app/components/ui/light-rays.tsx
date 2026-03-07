@@ -45,7 +45,7 @@ const hexToRgb = (hex: string): [number, number, number] => {
 const getAnchorAndDir = (
   origin: RaysOrigin,
   w: number,
-  h: number
+  h: number,
 ): { anchor: [number, number]; dir: [number, number] } => {
   const outside = 0.2;
   switch (origin) {
@@ -406,11 +406,7 @@ void main() {
 
     const { clientWidth: wCSS, clientHeight: hCSS } = containerRef.current;
     const dpr = renderer.dpr;
-    const { anchor, dir } = getAnchorAndDir(
-      raysOrigin,
-      wCSS * dpr,
-      hCSS * dpr
-    );
+    const { anchor, dir } = getAnchorAndDir(raysOrigin, wCSS * dpr, hCSS * dpr);
     u.rayPos.value = anchor;
     u.rayDir.value = dir;
   }, [

@@ -9,6 +9,18 @@ from google.genai import types
 
 logger = logging.getLogger("pipeline.llm")
 
+# Shared executor for all LLM calls. Avoids creating a new executor (and thread) per call,
+# which under load could accumulate threads and retain large payloads on timeout.
+_LLM_EXECUTOR: ThreadPoolExecutor | None = None
+
+
+def _get_llm_executor() -> ThreadPoolExecutor:
+    global _LLM_EXECUTOR
+    if _LLM_EXECUTOR is None:
+        # Stage 2/3 use up to 10 concurrent requests; allow some headroom.
+        _LLM_EXECUTOR = ThreadPoolExecutor(max_workers=12, thread_name_prefix="llm")
+    return _LLM_EXECUTOR
+
 # How much of request/response to log (chars); rest is replaced with "... (N more chars)"
 LOG_REQUEST_MAX_CHARS = 600
 LOG_RESPONSE_MAX_CHARS = 800
@@ -241,8 +253,9 @@ def complete(
     On 503 / UNAVAILABLE, retry that call with OpenAI and return OpenAI response.
     Uses GEMINI_API_KEY or GOOGLE_API_KEY from env if api_key is None.
     Enforces LLM_TIMEOUT_SEC per request to prevent indefinite hangs.
+    Uses a shared process-wide executor to avoid creating a new thread per call (memory/thread leak).
     """
-    ex = ThreadPoolExecutor(max_workers=1)
+    ex = _get_llm_executor()
     future = ex.submit(
         _complete_impl,
         system_prompt,
@@ -270,6 +283,4 @@ def complete(
             f"LLM request timed out after {LLM_TIMEOUT_SEC} seconds. "
             "The API may be slow or overloaded. Try again or use a shorter transcript."
         ) from None
-    finally:
-        # Don't block shutdown; we're intentionally avoiding joining a potentially hung thread.
-        ex.shutdown(wait=False, cancel_futures=True)
+    # Do not shutdown the shared executor; it is process-wide and reused.

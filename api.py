@@ -89,14 +89,21 @@ inngest_client = inngest.Inngest(
 )
 
 
-def _get_supabase():
-    from supabase import create_client
+_supabase_client = None
 
-    url = os.getenv("SUPABASE_URL") or os.getenv("NEXT_PUBLIC_SUPABASE_URL")
-    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-    if not url or not key:
-        raise RuntimeError("SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) and SUPABASE_SERVICE_ROLE_KEY must be set")
-    return create_client(url, key)
+
+def _get_supabase():
+    """Return a cached Supabase client. Avoids creating a new client (and HTTP pool) on every request."""
+    global _supabase_client
+    if _supabase_client is None:
+        from supabase import create_client
+
+        url = os.getenv("SUPABASE_URL") or os.getenv("NEXT_PUBLIC_SUPABASE_URL")
+        key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+        if not url or not key:
+            raise RuntimeError("SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) and SUPABASE_SERVICE_ROLE_KEY must be set")
+        _supabase_client = create_client(url, key)
+    return _supabase_client
 
 
 def _is_priority_user(user_id: str) -> bool:
