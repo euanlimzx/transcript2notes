@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import LightRays from "@/components/ui/light-rays";
@@ -17,7 +17,7 @@ function isAllowedEmail(email: string): boolean {
 
 const EMAIL_DOMAIN_MESSAGE = "Please use a Gmail or .edu email address.";
 
-export default function LoginPage() {
+function LoginForm() {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -149,5 +149,40 @@ export default function LoginPage() {
         </a>
       </footer>
     </div>
+  );
+}
+
+function LoginFallback() {
+  return (
+    <div className="fixed inset-0 flex flex-col items-center justify-center overflow-hidden bg-[#08090c] text-white">
+      <div className="absolute inset-0 w-full h-full">
+        <LightRays
+          raysOrigin="top-center"
+          raysColor="#e8e8e8"
+          raysSpeed={1}
+          lightSpread={1.2}
+          rayLength={4}
+          pulsating={false}
+          fadeDistance={1.5}
+          saturation={1}
+          followMouse
+          mouseInfluence={0.1}
+          noiseAmount={0}
+          distortion={0}
+          className="absolute inset-0 w-full h-full"
+        />
+      </div>
+      <main className="relative z-10 flex-1 w-full max-w-3xl px-6 sm:px-8 md:px-10 flex flex-col items-center justify-center text-center">
+        <div className="h-9 w-full max-w-md mx-auto animate-pulse rounded bg-white/10" />
+      </main>
+    </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginFallback />}>
+      <LoginForm />
+    </Suspense>
   );
 }
