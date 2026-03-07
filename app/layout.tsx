@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "makemenotes.com",
-  description: "makemenotes.com - Turn messy lecture transcripts into organized notes",
+  description: "makemenotes.com - Turn messy transcripts into organized notes",
 };
 
 export const viewport: Viewport = {

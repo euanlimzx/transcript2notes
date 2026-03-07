@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { type Conversion, formatSidebarTitle } from "@/lib/conversions";
+import { GENERIC_ERROR_MESSAGE } from "@/lib/errors";
 
 const SIDEBAR_WIDTH = 280;
 
@@ -108,10 +109,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         )
       );
       setEditingId(null);
-    } catch (e) {
-      setRenameError(
-        e instanceof Error ? e.message : "Failed to save name."
-      );
+    } catch {
+      setRenameError(GENERIC_ERROR_MESSAGE);
     } finally {
       setSavingId(null);
     }

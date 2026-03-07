@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { GENERIC_ERROR_MESSAGE } from "@/lib/errors";
 
 const ROWS_COLLAPSED = 1;
 const ROWS_EXPANDED = 4;
@@ -52,8 +53,8 @@ export default function HomePage() {
       if (jobId) {
         router.push(`/notes/${jobId}`);
       }
-    } catch (e) {
-      setSubmitError(e instanceof Error ? e.message : "Conversion failed.");
+    } catch {
+      setSubmitError(GENERIC_ERROR_MESSAGE);
     } finally {
       setLoading(false);
     }
@@ -95,7 +96,7 @@ export default function HomePage() {
             <textarea
               rows={rows}
               className="w-full resize-none bg-transparent px-5 py-3.5 pr-14 text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none text-base leading-relaxed min-h-0"
-              placeholder="Paste your lecture transcript here"
+              placeholder="Paste your transcript here"
               value={transcript}
               onChange={(e) => setTranscript(e.target.value)}
               onFocus={() => setIsFocused(true)}

@@ -3,6 +3,7 @@ const BACKEND = process.env.BACKEND_URL ?? "http://127.0.0.1:5328";
 const PROXY_TIMEOUT_MS = 15_000;
 
 import { createClient } from "@/lib/supabase/server";
+import { GENERIC_ERROR_MESSAGE } from "@/lib/errors";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -35,13 +36,15 @@ export async function POST(request: Request) {
     });
     const data = await res.json().catch(() => ({}));
     clearTimeout(timeoutId);
+    if (res.status >= 500) {
+      console.error("[api/conversions/rename] Backend error:", res.status, data);
+      return Response.json({ detail: GENERIC_ERROR_MESSAGE }, { status: 502 });
+    }
     return Response.json(data, { status: res.status });
   } catch (e) {
     clearTimeout(timeoutId);
-    return Response.json(
-      { detail: e instanceof Error ? e.message : "Failed to update name." },
-      { status: 502 }
-    );
+    console.error("[api/conversions/rename] Proxy error:", e);
+    return Response.json({ detail: GENERIC_ERROR_MESSAGE }, { status: 502 });
   }
 }
 

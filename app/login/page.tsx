@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import LightRays from "@/components/ui/light-rays";
-
-const ALLOWED_DOMAINS = [".edu", "gmail.com", "googlemail.com"];
 
 function isAllowedEmail(email: string): boolean {
   const domain = email.trim().toLowerCase().split("@")[1];
@@ -16,13 +15,20 @@ function isAllowedEmail(email: string): boolean {
   );
 }
 
+const EMAIL_DOMAIN_MESSAGE = "Please use a Gmail or .edu email address.";
+
 export default function LoginPage() {
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
-  } | null>(null);
+  } | null>(() =>
+    searchParams.get("error") === "email_domain"
+      ? { type: "error" as const, text: EMAIL_DOMAIN_MESSAGE }
+      : null
+  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -35,7 +41,7 @@ export default function LoginPage() {
     if (!isAllowedEmail(trimmed)) {
       setMessage({
         type: "error",
-        text: "Please use a Gmail or .edu email address.",
+        text: EMAIL_DOMAIN_MESSAGE,
       });
       return;
     }
@@ -88,7 +94,7 @@ export default function LoginPage() {
           className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold mb-4 sm:mb-6 text-white"
           style={{ fontFamily: "Google Sans, sans-serif" }}
         >
-          Turn Messy Lecture Transcripts Into Organized Notes
+          Turn Transcripts Into Organized Notes
         </h1>
         <p
           className="text-lg sm:text-xl md:text-2xl text-zinc-300 mb-8 sm:mb-14"

@@ -48,9 +48,7 @@ export default function FakeUIPage() {
             aria-hidden
           />
           <div className="min-w-0 flex-1">
-            <p className="text-base font-medium">
-              {progressLabel(progress)}
-            </p>
+            <p className="text-base font-medium">{progressLabel(progress)}</p>
             <p className="text-base text-zinc-500 dark:text-zinc-400 mt-1">
               {jobsBefore !== null
                 ? jobsBefore === 0

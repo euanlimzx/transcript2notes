@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
+import { GENERIC_ERROR_MESSAGE } from "@/lib/errors";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
@@ -116,8 +117,8 @@ export default function NotesPage() {
       if (jobId) {
         router.replace(`/notes/${jobId}`);
       }
-    } catch (e) {
-      setRerunError(e instanceof Error ? e.message : "Re-run failed.");
+    } catch {
+      setRerunError(GENERIC_ERROR_MESSAGE);
     } finally {
       setRerunLoading(false);
     }

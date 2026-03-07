@@ -10,9 +10,12 @@ from datetime import datetime, timedelta, timezone
 import inngest
 import inngest.fast_api
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+
+GENERIC_ERROR_DETAIL = "An unexpected error occurred with our servers."
 
 load_dotenv()
 
@@ -87,6 +90,28 @@ inngest_client = inngest.Inngest(
     app_id=os.getenv("INNGEST_APP_ID", "transcript2notes"),
     is_production=os.getenv("INNGEST_DEV") != "1",  # Production by default; set INNGEST_DEV=1 for local dev
 )
+
+
+@app.exception_handler(HTTPException)
+def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    """Log 5xx and return generic message; pass through 4xx with original detail."""
+    if exc.status_code >= 500:
+        logger.exception("HTTPException %s: %s", exc.status_code, exc.detail)
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": GENERIC_ERROR_DETAIL},
+        )
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
+
+@app.exception_handler(Exception)
+def uncaught_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Log uncaught exceptions and return generic message."""
+    logger.exception("Uncaught exception: %s", exc)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": GENERIC_ERROR_DETAIL},
+    )
 
 
 _supabase_client = None
@@ -548,8 +573,24 @@ def rename_conversion(request: RenameRequest):
 
 
 @app.get("/api/conversions/{job_id}/queue-position")
-def get_queue_position(job_id: str):
-    """Return jobs_before count for a pending conversion."""
+def get_queue_position(job_id: str, userId: str | None = None):
+    """Return jobs_before count for a pending conversion. Requires userId; verifies ownership."""
+    if not userId:
+        raise HTTPException(status_code=401, detail="userId is required; sign in to check queue position")
+    supabase = _get_supabase()
+    res = (
+        supabase.table("conversions")
+        .select("id, user_id, status")
+        .eq("id", job_id)
+        .limit(1)
+        .execute()
+    )
+    rows = res.data or []
+    if not rows:
+        raise HTTPException(status_code=404, detail="Job not found")
+    row = rows[0]
+    if row.get("user_id") != userId:
+        raise HTTPException(status_code=403, detail="Not authorized to view this conversion")
     pos = _get_queue_position(job_id)
     if pos is None:
         raise HTTPException(status_code=404, detail="Job not found or not pending")
@@ -557,10 +598,25 @@ def get_queue_position(job_id: str):
 
 
 @app.delete("/api/conversions/{job_id}")
-def delete_conversion(job_id: str):
-    """Delete a conversion by id (service role). Returns 204 on success."""
+def delete_conversion(job_id: str, userId: str | None = None):
+    """Delete a conversion by id. Requires userId; verifies ownership. Returns 204 on success."""
     from fastapi.responses import Response
 
+    if not userId:
+        raise HTTPException(status_code=401, detail="userId is required; sign in to delete")
     supabase = _get_supabase()
+    res = (
+        supabase.table("conversions")
+        .select("id, user_id")
+        .eq("id", job_id)
+        .limit(1)
+        .execute()
+    )
+    rows = res.data or []
+    if not rows:
+        raise HTTPException(status_code=404, detail="Conversion not found")
+    row = rows[0]
+    if row.get("user_id") != userId:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this conversion")
     supabase.table("conversions").delete().eq("id", job_id).execute()
     return Response(status_code=204)
