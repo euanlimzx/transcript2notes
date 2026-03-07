@@ -18,6 +18,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api.formatters import TextFormatter
+from youtube_transcript_api.proxies import WebshareProxyConfig
 
 GENERIC_ERROR_DETAIL = "An unexpected error occurred with our servers."
 
@@ -371,9 +372,19 @@ def _fetch_youtube_transcript(video_id: str) -> str:
     """
     Fetch transcript for a YouTube video using youtube-transcript-api.
     Returns plain text. Raises HTTPException on failure.
+    Uses Webshare proxy when WEBSHARE_PROXY_USERNAME and WEBSHARE_PROXY_PASSWORD are set in .env.
     """
-    try:
+    proxy_user = os.getenv("WEBSHARE_PROXY_USERNAME")
+    proxy_pass = os.getenv("WEBSHARE_PROXY_PASSWORD")
+    if proxy_user and proxy_pass:
+        proxy_config = WebshareProxyConfig(
+            proxy_username=proxy_user,
+            proxy_password=proxy_pass,
+        )
+        ytt_api = YouTubeTranscriptApi(proxy_config=proxy_config)
+    else:
         ytt_api = YouTubeTranscriptApi()
+    try:
         fetched = ytt_api.fetch(video_id)
         return TextFormatter().format_transcript(fetched)
     except Exception as e:
