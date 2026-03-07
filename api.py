@@ -1,5 +1,6 @@
 """FastAPI app: POST /convert accepts transcript, returns job id (202). Pipeline runs via Inngest and updates Supabase."""
 import asyncio
+import errno
 import hashlib
 import logging
 import os
@@ -176,27 +177,46 @@ def _has_pending_jobs() -> bool:
         return False
 
 
+def _is_transient_network_error(e: BaseException) -> bool:
+    """True if the exception is EAGAIN/EWOULDBLOCK or caused by it (e.g. from httpx/httpcore)."""
+    errno_val = getattr(e, "errno", None)
+    if errno_val in (errno.EAGAIN, errno.EWOULDBLOCK):
+        return True
+    cause = getattr(e, "__cause__", None) or getattr(e, "__context__", None)
+    if cause is not None:
+        return _is_transient_network_error(cause)
+    return False
+
+
 def _get_queue_position(job_id: str) -> int | None:
     """Return number of jobs ahead of this one (0 = next), or None if not pending."""
-    try:
-        supabase = _get_supabase()
-        # Get all pending jobs ordered by queue
-        res = (
-            supabase.table("conversions")
-            .select("id")
-            .eq("status", "pending")
-            .order("is_priority", desc=True)
-            .order("created_at", desc=False)
-            .execute()
-        )
-        rows = res.data or []
-        for i, row in enumerate(rows):
-            if row.get("id") == job_id:
-                return i
-        return None
-    except Exception as e:
-        logger.warning("Failed to get queue position for %s: %s", job_id, e)
-        return None
+    last_exc = None
+    for attempt in range(3):
+        try:
+            supabase = _get_supabase()
+            # Get all pending jobs ordered by queue
+            res = (
+                supabase.table("conversions")
+                .select("id")
+                .eq("status", "pending")
+                .order("is_priority", desc=True)
+                .order("created_at", desc=False)
+                .execute()
+            )
+            rows = res.data or []
+            for i, row in enumerate(rows):
+                if row.get("id") == job_id:
+                    return i
+            return None
+        except Exception as e:
+            last_exc = e
+            if _is_transient_network_error(e) and attempt < 2:
+                time.sleep(0.15 * (attempt + 1))
+                continue
+            logger.warning("Failed to get queue position for %s: %s", job_id, e)
+            return None
+    logger.warning("Failed to get queue position for %s: %s", job_id, last_exc)
+    return None
 
 
 def _run_pipeline_and_update(job_id: str, transcript: str, user_id: str) -> None:

@@ -45,9 +45,8 @@ export default function NotesPage() {
   useEffect(() => {
     if (!conversion || conversion.status !== "pending") return;
 
-    const HEALTH_INTERVAL_MS = 30_000;
-    const hasProgress = !!conversion.progress;
-    const REFRESH_INTERVAL_MS = hasProgress ? 5_000 : 15_000;
+    const HEALTH_INTERVAL_MS = 60_000;
+    const REFRESH_INTERVAL_MS = 60_000;
 
     const pingHealth = async () => {
       try {
@@ -73,7 +72,7 @@ export default function NotesPage() {
         if (res.ok) {
           const data = await res.json();
           setJobsBefore(
-            typeof data.jobs_before === "number" ? data.jobs_before : null
+            typeof data.jobs_before === "number" ? data.jobs_before : null,
           );
         } else {
           setJobsBefore(null);
@@ -89,7 +88,10 @@ export default function NotesPage() {
 
     const healthTimer = window.setInterval(pingHealth, HEALTH_INTERVAL_MS);
     const refreshTimer = window.setInterval(refresh, REFRESH_INTERVAL_MS);
-    const queueTimer = window.setInterval(fetchQueuePosition, REFRESH_INTERVAL_MS);
+    const queueTimer = window.setInterval(
+      fetchQueuePosition,
+      REFRESH_INTERVAL_MS,
+    );
 
     return () => {
       window.clearInterval(healthTimer);
@@ -126,8 +128,8 @@ export default function NotesPage() {
 
   if (notFound) {
     return (
-      <div className="flex flex-col items-center justify-start min-h-full w-full px-6 sm:px-8 pt-[30vh] pb-8">
-        <p className="text-base font-medium text-zinc-500 dark:text-zinc-400 w-full max-w-[50%] text-left">
+      <div className="w-full px-6 sm:px-8 pt-[30vh] pb-8">
+        <p className="text-base font-medium text-zinc-500 dark:text-zinc-400 max-w-lg mx-auto text-left">
           Conversion not found.
         </p>
       </div>
@@ -140,24 +142,27 @@ export default function NotesPage() {
 
   if (conversion.status === "pending") {
     return (
-      <div className="flex flex-col items-center justify-start min-h-full w-full px-6 sm:px-8 pt-[30vh] pb-8">
-        <div className="flex items-start gap-2 w-full max-w-[50%]">
-          <span
-            className="inline-block w-2 h-2 rounded-full bg-zinc-400 dark:bg-zinc-500 animate-pulse shrink-0 mt-1.5"
-            aria-hidden
-          />
-          <div className="min-w-0 flex-1">
+      <div className="w-full px-6 sm:px-8 pt-[30vh] pb-8">
+        <div className="max-w-lg mx-auto flex flex-col items-start text-left">
+          <div className="flex items-center gap-2">
+            <span
+              className="inline-block w-2 h-2 rounded-full bg-zinc-400 dark:bg-zinc-500 animate-pulse shrink-0"
+              aria-hidden
+            />
             <p className="text-base font-medium">
               {progressLabel(conversion.progress)}
             </p>
-            <p className="text-base text-zinc-500 dark:text-zinc-400 mt-1">
-              {jobsBefore !== null
-                ? jobsBefore === 0
-                  ? "We're currently processing your transcript right now. We're expecting this to take a while, so feel free to check back in later for updates."
-                  : `There are ${jobsBefore} job${jobsBefore === 1 ? "" : "s"} ahead of you in queue right now. We're expecting this to take a while, so feel free to check back in later for updates.`
-                : "We're expecting this to take a while, so feel free to check back in later for updates."}
-            </p>
           </div>
+          <p className="text-base text-zinc-500 dark:text-zinc-400 mt-1">
+            We&apos;re expecting this to take a while, so please check back
+            later for updates.
+          </p>
+          {jobsBefore != null && jobsBefore > 0 && (
+            <p className="text-base text-zinc-500 dark:text-zinc-400 mt-1">
+              There are {jobsBefore} job{jobsBefore === 1 ? "" : "s"} ahead of
+              you in queue.
+            </p>
+          )}
         </div>
       </div>
     );
@@ -165,8 +170,8 @@ export default function NotesPage() {
 
   if (conversion.status === "failed") {
     return (
-      <div className="flex flex-col items-center justify-start min-h-full w-full px-6 sm:px-8 pt-[30vh] pb-8">
-        <div className="w-full max-w-[50%] flex flex-col items-start text-left">
+      <div className="w-full px-6 sm:px-8 pt-[30vh] pb-8">
+        <div className="max-w-lg mx-auto flex flex-col items-start text-left">
           {conversion.error && (
             <p
               className="text-base font-medium text-red-600 dark:text-red-400 mb-4"
@@ -198,8 +203,8 @@ export default function NotesPage() {
   // Completed
   if (!conversion.markdown?.trim()) {
     return (
-      <div className="flex flex-col items-center justify-start min-h-full w-full px-6 sm:px-8 pt-[30vh] pb-8">
-        <p className="text-base font-medium text-zinc-500 dark:text-zinc-400 w-full max-w-[50%] text-left">
+      <div className="w-full px-6 sm:px-8 pt-[30vh] pb-8">
+        <p className="text-base font-medium text-zinc-500 dark:text-zinc-400 max-w-lg mx-auto text-left">
           No notes content.
         </p>
       </div>

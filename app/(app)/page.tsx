@@ -119,7 +119,7 @@ export default function HomePage() {
 
         {submitError && (
           <p
-            className="text-sm text-red-600 dark:text-red-400 text-center max-w-[50%] mx-auto"
+            className="text-sm text-red-600 dark:text-red-400 max-w-lg mx-auto text-left"
             role="alert"
           >
             {submitError}
