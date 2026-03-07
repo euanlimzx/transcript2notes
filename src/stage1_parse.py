@@ -6,7 +6,7 @@ from .models import ParsedLine
 # Max characters per LLM request (conservative for context + to avoid single huge calls)
 # Lowered so long transcripts are split into multiple overlapping slices, which lets
 # Stage 2/3 fan out and avoids one giant "boundaries" request becoming a bottleneck.
-MAX_CHARS_PER_SLICE = 30_000
+MAX_CHARS_PER_SLICE = 90_000
 # When slicing: window length and overlap in seconds (25 min, 5 min overlap)
 SLICE_WINDOW_SEC = 25 * 60
 SLICE_OVERLAP_SEC = 5 * 60

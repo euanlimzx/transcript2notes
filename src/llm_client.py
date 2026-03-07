@@ -4,6 +4,9 @@ import os
 import time
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
+LLM_RETRY_ATTEMPTS = 3  # 1 initial + 2 retries
+LLM_RETRY_DELAY_SEC = 8
+
 from google import genai
 from google.genai import types
 
@@ -30,8 +33,8 @@ LOG_RESPONSE_MAX_CHARS = 800
 LOG_LLM_BODIES = os.getenv("LLM_LOG_BODIES", "0") == "1"
 
 # Max seconds per LLM request; prevents indefinite hangs (e.g. 12+ min at "segmenting").
-# 180s allows Gemini attempt + OpenAI fallback on 503.
-LLM_TIMEOUT_SEC = 300
+# 600s allows long context (e.g. 90k chars); we retry up to 2 times on timeout/failure.
+LLM_TIMEOUT_SEC = 600
 
 # Map Gemini model names to OpenAI model for fallback on 503
 GEMINI_TO_OPENAI_MODEL = {
@@ -252,35 +255,50 @@ def complete(
     Call Gemini with system instruction and user content; return response text.
     On 503 / UNAVAILABLE, retry that call with OpenAI and return OpenAI response.
     Uses GEMINI_API_KEY or GOOGLE_API_KEY from env if api_key is None.
-    Enforces LLM_TIMEOUT_SEC per request to prevent indefinite hangs.
+    Enforces LLM_TIMEOUT_SEC per request; retries up to 2 times (3 attempts total) on timeout/failure.
     Uses a shared process-wide executor to avoid creating a new thread per call (memory/thread leak).
     """
     ex = _get_llm_executor()
-    future = ex.submit(
-        _complete_impl,
-        system_prompt,
-        user_content,
-        model,
-        api_key,
-        label,
-        trace_id,
-    )
-    try:
-        return future.result(timeout=LLM_TIMEOUT_SEC)
-    except FuturesTimeoutError:
-        # Important: do not wait for the hung worker thread. If the underlying SDK call
-        # is stuck, waiting here defeats the point of the timeout and can stall the
-        # whole pipeline (often presenting as "stuck at segmenting").
-        future.cancel()
-        logger.error(
-            "LLM request timed out after %ds (label=%s, trace=%s). "
-            "Check API keys, network, or try a shorter transcript.",
-            LLM_TIMEOUT_SEC,
-            label or "unknown",
-            trace_id or "",
+    last_exc: BaseException | None = None
+    for attempt in range(1, LLM_RETRY_ATTEMPTS + 1):
+        future = ex.submit(
+            _complete_impl,
+            system_prompt,
+            user_content,
+            model,
+            api_key,
+            label,
+            trace_id,
         )
-        raise RuntimeError(
-            f"LLM request timed out after {LLM_TIMEOUT_SEC} seconds. "
-            "The API may be slow or overloaded. Try again or use a shorter transcript."
-        ) from None
-    # Do not shutdown the shared executor; it is process-wide and reused.
+        try:
+            return future.result(timeout=LLM_TIMEOUT_SEC)
+        except FuturesTimeoutError:
+            future.cancel()
+            last_exc = RuntimeError(
+                f"LLM request timed out after {LLM_TIMEOUT_SEC} seconds. "
+                "The API may be slow or overloaded. Try again or use a shorter transcript."
+            )
+            logger.error(
+                "LLM request timed out after %ds (label=%s, trace=%s). "
+                "Check API keys, network, or try a shorter transcript.",
+                LLM_TIMEOUT_SEC,
+                label or "unknown",
+                trace_id or "",
+            )
+        except Exception as e:
+            last_exc = e
+            logger.exception(
+                "LLM request failed (label=%s, trace=%s): %s",
+                label or "unknown",
+                trace_id or "",
+                e,
+            )
+        if attempt < LLM_RETRY_ATTEMPTS:
+            logger.warning(
+                "LLM request failed (attempt %d/%d), retrying in %ds...",
+                attempt,
+                LLM_RETRY_ATTEMPTS,
+                LLM_RETRY_DELAY_SEC,
+            )
+            time.sleep(LLM_RETRY_DELAY_SEC)
+    raise last_exc from None

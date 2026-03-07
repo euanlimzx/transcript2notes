@@ -25,6 +25,35 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+# Loggers that emit pipeline/job-scoped logs (used for job log capture in _run_pipeline_and_update).
+PIPELINE_LOGGER_NAMES = [
+    "api",
+    "src.pipeline",
+    "src.stage1_parse",
+    "src.stage2_boundaries",
+    "src.stage3_notes",
+    "src.topic_extraction",
+    "pipeline.llm",
+]
+
+
+class _JobLogHandler(logging.Handler):
+    """Captures log records for a single job into a list; only appends when the formatted line contains job_id."""
+
+    def __init__(self, log_list: list[str], job_id: str) -> None:
+        super().__init__()
+        self._log_list = log_list
+        self._job_id = job_id
+        self.setFormatter(logging.Formatter("%(levelname)s:%(name)s:%(message)s"))
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            formatted = self.format(record)
+            if self._job_id in formatted:
+                self._log_list.append(formatted)
+        except Exception:
+            self.handleError(record)
+
 
 def _configure_logging() -> None:
     """
@@ -54,17 +83,7 @@ def _configure_logging() -> None:
     handler.setLevel(logging.INFO)
     handler.setFormatter(logging.Formatter("%(levelname)s:%(name)s:%(message)s"))
 
-    # Loggers we care about: app + pipeline stages + topic extraction + LLM
-    important_loggers = [
-        "api",
-        "src.pipeline",
-        "src.stage1_parse",
-        "src.stage2_boundaries",
-        "src.stage3_notes",
-        "src.topic_extraction",
-        "pipeline.llm",
-    ]
-    for name in important_loggers:
+    for name in PIPELINE_LOGGER_NAMES:
         lg = logging.getLogger(name)
         lg.handlers = []  # avoid duplicate output if reconfigured
         lg.addHandler(handler)
@@ -229,6 +248,12 @@ def _run_pipeline_and_update(job_id: str, transcript: str, user_id: str) -> None
         except Exception as e:
             logger.warning("Failed to update progress for %s: %s", job_id, e)
 
+    job_logs: list[str] = []
+    job_log_handler = _JobLogHandler(job_logs, job_id)
+    job_log_handler.setLevel(logging.INFO)
+    for name in PIPELINE_LOGGER_NAMES:
+        logging.getLogger(name).addHandler(job_log_handler)
+
     try:
         from src.pipeline import run_pipeline
 
@@ -253,13 +278,20 @@ def _run_pipeline_and_update(job_id: str, transcript: str, user_id: str) -> None
             ).eq("id", job_id).execute()
         except Exception as update_err:
             logger.exception("Failed to update conversion %s to failed: %s", job_id, update_err)
+    finally:
+        for name in PIPELINE_LOGGER_NAMES:
+            logging.getLogger(name).removeHandler(job_log_handler)
+        try:
+            _get_supabase().table("conversions").update({"logs": job_logs}).eq("id", job_id).execute()
+        except Exception as e:
+            logger.warning("Failed to persist job logs for %s: %s", job_id, e)
 
 
 @inngest_client.create_function(
     fn_id="process-conversion-next",
     trigger=inngest.TriggerEvent(event="conversion/process-next"),
     concurrency=[inngest.Concurrency(limit=1)],
-    timeouts=inngest.Timeouts(finish=timedelta(minutes=15)),
+    timeouts=inngest.Timeouts(finish=timedelta(minutes=28)),
 )
 async def process_conversion_next(ctx: inngest.Context) -> None:
     """Pick next pending job, run pipeline, emit process-next if more pending."""
