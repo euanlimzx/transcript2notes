@@ -53,7 +53,9 @@ type NotionSearchResult = {
   }>;
 };
 
-function extractPageTitle(page: NotionSearchResult["results"] extends Array<infer R> ? R : never): string {
+type NotionSearchPageResult = NonNullable<NotionSearchResult["results"]>[number];
+
+function extractPageTitle(page: NotionSearchPageResult): string {
   const props = page.properties ?? {};
   for (const key of Object.keys(props)) {
     const prop = props[key];
