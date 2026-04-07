@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { HighlightPopover } from "@/components/HighlightPopover";
 import { useParams, useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import { GENERIC_ERROR_MESSAGE } from "@/lib/errors";
@@ -21,6 +22,7 @@ export default function NotesPage() {
   const [notFound, setNotFound] = useState(false);
   const [rerunLoading, setRerunLoading] = useState(false);
   const [rerunError, setRerunError] = useState<string | null>(null);
+  const articleRef = useRef<HTMLElement | null>(null);
 
   const fetchConversion = useCallback(async () => {
     const { data, error } = await supabase
@@ -234,7 +236,8 @@ export default function NotesPage() {
   }
   return (
     <div className="mx-auto max-w-3xl px-6 sm:px-8 md:px-12 pt-4 sm:pt-10 md:pt-36 pb-12 md:pb-16 leading-relaxed">
-      <article className="prose prose-base sm:prose-lg prose-zinc dark:prose-invert max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-p:my-3 sm:prose-p:my-4 prose-p:leading-7 sm:prose-p:leading-8 prose-p:text-base sm:prose-p:text-[1.125rem] prose-ul:my-3 sm:prose-ul:my-4 prose-ol:my-3 sm:prose-ol:my-4 prose-li:my-0.5 prose-li:text-base sm:prose-li:text-[1.125rem] prose-pre:bg-zinc-100 dark:prose-pre:bg-zinc-800/50 prose-pre:rounded-md prose-pre:px-3 sm:prose-pre:px-4 prose-pre:py-2 sm:prose-pre:py-3 prose-pre:text-sm sm:prose-pre:text-base prose-blockquote:border-l-zinc-300 dark:prose-blockquote:border-l-zinc-600 prose-blockquote:not-italic prose-blockquote:text-base sm:prose-blockquote:text-[1.125rem]">
+      <HighlightPopover containerRef={articleRef} />
+      <article ref={articleRef} className="prose prose-base sm:prose-lg prose-zinc dark:prose-invert max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-p:my-3 sm:prose-p:my-4 prose-p:leading-7 sm:prose-p:leading-8 prose-p:text-base sm:prose-p:text-[1.125rem] prose-ul:my-3 sm:prose-ul:my-4 prose-ol:my-3 sm:prose-ol:my-4 prose-li:my-0.5 prose-li:text-base sm:prose-li:text-[1.125rem] prose-pre:bg-zinc-100 dark:prose-pre:bg-zinc-800/50 prose-pre:rounded-md prose-pre:px-3 sm:prose-pre:px-4 prose-pre:py-2 sm:prose-pre:py-3 prose-pre:text-sm sm:prose-pre:text-base prose-blockquote:border-l-zinc-300 dark:prose-blockquote:border-l-zinc-600 prose-blockquote:not-italic prose-blockquote:text-base sm:prose-blockquote:text-[1.125rem]">
         <ReactMarkdown
           remarkPlugins={[remarkGfm, remarkMath]}
           rehypePlugins={[rehypeKatex]}

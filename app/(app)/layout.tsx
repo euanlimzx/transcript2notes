@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { type Conversion, formatSidebarTitle } from "@/lib/conversions";
 import { GENERIC_ERROR_MESSAGE } from "@/lib/errors";
+import { NotionSidebarSection } from "@/components/NotionSidebarSection";
 
 const SIDEBAR_WIDTH = 280;
 
@@ -307,6 +308,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </ul>
             )}
           </div>
+
+          <NotionSidebarSection />
 
           {/* Sign out - bottom, fixed */}
           <div className="p-2 border-t border-zinc-700 shrink-0">
