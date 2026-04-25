@@ -534,21 +534,6 @@ def _convert_impl(request: ConvertRequest) -> ConvertAcceptedResponse:
 
     supabase = _get_supabase()
 
-    # One job per user
-    existing = (
-        supabase.table("conversions")
-        .select("id")
-        .eq("user_id", request.userId)
-        .eq("status", "pending")
-        .limit(1)
-        .execute()
-    )
-    if existing.data and len(existing.data) > 0:
-        raise HTTPException(
-            status_code=409,
-            detail="You already have a conversion in progress. Wait for it to finish or close the tab.",
-        )
-
     transcript_hash = hashlib.sha256(transcript.encode("utf-8")).hexdigest()
 
     # Hash deduplication: reuse any completed conversion with same transcript hash
@@ -603,21 +588,6 @@ def _convert_impl(request: ConvertRequest) -> ConvertAcceptedResponse:
 def rerun(request: RerunRequest) -> ConvertAcceptedResponse:
     """Re-run a failed conversion using its stored transcript."""
     supabase = _get_supabase()
-
-    # One job per user
-    existing = (
-        supabase.table("conversions")
-        .select("id")
-        .eq("user_id", request.userId)
-        .eq("status", "pending")
-        .limit(1)
-        .execute()
-    )
-    if existing.data and len(existing.data) > 0:
-        raise HTTPException(
-            status_code=409,
-            detail="You already have a conversion in progress. Wait for it to finish or close the tab.",
-        )
 
     res = (
         supabase.table("conversions")
