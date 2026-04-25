@@ -61,6 +61,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [editingValue, setEditingValue] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
   const [renameError, setRenameError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
@@ -144,6 +145,32 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   async function handleSignOut() {
     await supabase.auth.signOut();
     router.refresh();
+  }
+
+  async function deleteConversion(jobId: string) {
+    if (deletingId) return;
+    setRenameError(null);
+    setDeletingId(jobId);
+    try {
+      const res = await fetch(`/api/conversions/${jobId}`, { method: "DELETE" });
+      if (res.status !== 204) {
+        const data = await res.json().catch(() => ({}));
+        setRenameError(data.detail ?? "Failed to delete note.");
+        return;
+      }
+      setConversions((prev) => prev.filter((c) => c.id !== jobId));
+      if (editingId === jobId) {
+        setEditingId(null);
+        setEditingValue("");
+      }
+      if (pathname === `/notes/${jobId}`) {
+        router.push("/");
+      }
+    } catch {
+      setRenameError(GENERIC_ERROR_MESSAGE);
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   return (
@@ -299,6 +326,39 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                           >
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (deletingId) return;
+                            const ok = window.confirm(
+                              "Delete this note? This action cannot be undone."
+                            );
+                            if (!ok) return;
+                            void deleteConversion(c.id);
+                          }}
+                          disabled={deletingId === c.id}
+                          className="p-1 rounded-md text-zinc-500 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          aria-label="Delete note"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M3 6h18" />
+                            <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                            <line x1="10" y1="11" x2="10" y2="17" />
+                            <line x1="14" y1="11" x2="14" y2="17" />
                           </svg>
                         </button>
                       </div>
