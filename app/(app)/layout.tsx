@@ -6,6 +6,8 @@ import { supabase } from "@/lib/supabase";
 import { type Conversion, formatSidebarTitle } from "@/lib/conversions";
 import { GENERIC_ERROR_MESSAGE } from "@/lib/errors";
 import { NotionSidebarSection } from "@/components/NotionSidebarSection";
+import { jsPDF } from "jspdf";
+import JSZip from "jszip";
 
 const SIDEBAR_WIDTH = 280;
 
@@ -62,6 +64,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [renameError, setRenameError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState<"markdown" | "pdf">("markdown");
+  const [selectedExportIds, setSelectedExportIds] = useState<string[]>([]);
+  const [exporting, setExporting] = useState(false);
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
@@ -173,6 +179,118 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const exportableConversions = conversions.filter(
+    (c) => c.status === "completed" && Boolean(c.markdown?.trim())
+  );
+
+  function openExportModal() {
+    setExportOpen(true);
+    setExportFormat("markdown");
+    setSelectedExportIds(exportableConversions.map((c) => c.id));
+  }
+
+  function toggleExportSelection(id: string) {
+    setSelectedExportIds((prev) =>
+      prev.includes(id) ? prev.filter((currentId) => currentId !== id) : [...prev, id]
+    );
+  }
+
+  function sanitizeFileName(input: string): string {
+    const cleaned = input
+      .trim()
+      .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
+      .replace(/\s+/g, " ");
+    return cleaned.length > 0 ? cleaned : "note";
+  }
+
+  function buildMarkdownForItem(item: Conversion): string {
+    const title = formatSidebarTitle(item);
+    const body = item.markdown?.trim() ?? "";
+    return `# ${title}\n\n${body}`;
+  }
+
+  function buildPdfBuffer(content: string): ArrayBuffer {
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "pt",
+      format: "a4",
+    });
+    const margin = 48;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const maxWidth = pageWidth - margin * 2;
+    const lineHeight = 16;
+    let y = margin;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+
+    const lines = doc.splitTextToSize(content, maxWidth) as string[];
+    lines.forEach((line) => {
+      if (y > pageHeight - margin) {
+        doc.addPage();
+        y = margin;
+      }
+      doc.text(line, margin, y);
+      y += lineHeight;
+    });
+
+    return doc.output("arraybuffer");
+  }
+
+  async function handleExport() {
+    if (selectedExportIds.length === 0) {
+      setRenameError("Select at least one note to export.");
+      return;
+    }
+
+    const selected = exportableConversions.filter((c) =>
+      selectedExportIds.includes(c.id)
+    );
+    if (selected.length === 0) {
+      setRenameError("No completed notes available to export.");
+      return;
+    }
+
+    setRenameError(null);
+    setExporting(true);
+    try {
+      const zip = new JSZip();
+
+      selected.forEach((item, idx) => {
+        const safeTitle = sanitizeFileName(formatSidebarTitle(item));
+        const fileBase = `${String(idx + 1).padStart(2, "0")}-${safeTitle}`;
+        const markdown = buildMarkdownForItem(item);
+
+        if (exportFormat === "markdown") {
+          zip.file(`${fileBase}.md`, markdown);
+          return;
+        }
+
+        const pdfBuffer = buildPdfBuffer(markdown);
+        zip.file(`${fileBase}.pdf`, pdfBuffer);
+      });
+
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const zipName =
+        exportFormat === "markdown" ? "notes-markdown-export.zip" : "notes-pdf-export.zip";
+      const zipUrl = URL.createObjectURL(zipBlob);
+      const anchor = document.createElement("a");
+      anchor.href = zipUrl;
+      anchor.download = zipName;
+      anchor.click();
+      URL.revokeObjectURL(zipUrl);
+
+      if (selected.length > 0) {
+        setExportOpen(false);
+      }
+    } catch {
+      setRenameError("Export failed. Please try again.");
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <div className="h-screen overflow-hidden bg-background text-foreground flex relative">
       {/* Mobile overlay - tap outside to close sidebar */}
@@ -232,6 +350,29 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <path d="M10.378 12.622a1 1 0 0 1 3 3.003L8.36 20.637a2 2 0 0 1-.854.506l-2.867.837a.5.5 0 0 1-.62-.62l.836-2.869a2 2 0 0 1 .506-.853z" />
               </svg>
               Generate Notes
+            </button>
+            <button
+              type="button"
+              onClick={openExportModal}
+              disabled={exportableConversions.length === 0}
+              className="mt-1 w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 text-zinc-700 dark:text-[#E0E0E0] hover:bg-zinc-200 dark:hover:bg-[#282828] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Export Notes
             </button>
           </div>
 
@@ -388,6 +529,116 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </aside>
+
+      {exportOpen && (
+        <div className="fixed inset-0 z-70 flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-lg rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-4 sm:p-5 shadow-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+                  Export notes
+                </h2>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                  Choose the notes you want and pick an export format.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setExportOpen(false)}
+                className="p-1 rounded-md text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                aria-label="Close export dialog"
+              >
+                <CloseIcon className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                  Files
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSelectedExportIds((prev) =>
+                      prev.length === exportableConversions.length
+                        ? []
+                        : exportableConversions.map((c) => c.id)
+                    )
+                  }
+                  className="text-xs text-zinc-600 dark:text-zinc-300 hover:underline"
+                >
+                  {selectedExportIds.length === exportableConversions.length
+                    ? "Clear all"
+                    : "Select all"}
+                </button>
+              </div>
+
+              <div className="max-h-56 overflow-y-auto rounded-lg border border-zinc-200 dark:border-zinc-700">
+                {exportableConversions.map((c) => (
+                  <label
+                    key={c.id}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-zinc-700 dark:text-zinc-200 border-b border-zinc-100 dark:border-zinc-800 last:border-b-0"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedExportIds.includes(c.id)}
+                      onChange={() => toggleExportSelection(c.id)}
+                    />
+                    <span className="truncate">{formatSidebarTitle(c)}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <label className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                Format
+              </label>
+              <div className="mt-2 flex items-center gap-4">
+                <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-200">
+                  <input
+                    type="radio"
+                    name="export-format"
+                    checked={exportFormat === "markdown"}
+                    onChange={() => setExportFormat("markdown")}
+                  />
+                  Markdown (.md)
+                </label>
+                <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-200">
+                  <input
+                    type="radio"
+                    name="export-format"
+                    checked={exportFormat === "pdf"}
+                    onChange={() => setExportFormat("pdf")}
+                  />
+                  PDF (.pdf)
+                </label>
+              </div>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setExportOpen(false)}
+                className="px-3 py-1.5 rounded-md text-sm border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleExport}
+                disabled={exporting || selectedExportIds.length === 0}
+                className="px-3 py-1.5 rounded-md text-sm bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {exporting
+                  ? "Exporting…"
+                  : `Export ${exportFormat === "markdown" ? "Markdown" : "PDF"}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main content - independent scroll */}
       <main className="flex-1 min-w-0 overflow-auto h-screen flex flex-col relative">
